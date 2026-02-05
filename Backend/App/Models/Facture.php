@@ -3,7 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Model; 
+use App\Models\Commande;
+use App\Models\TypeDocument;
+use App\Models\StatutPaiement;
 
 class Facture extends Model
 {

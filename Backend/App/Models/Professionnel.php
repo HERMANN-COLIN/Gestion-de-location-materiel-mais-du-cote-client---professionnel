@@ -4,6 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
+use App\Models\Langue;
+use App\Models\Adresse;
+use App\Models\ContactPro;
 class Professionnel extends Model
 {
     use HasFactory;
@@ -37,4 +41,8 @@ class Professionnel extends Model
     {
         return $this->belongsTo(Adresse::class, 'adresse_livraison_id');
     }
+    public function contactPro()
+{
+    return $this->hasOne(ContactPro::class, 'professionnel_id');
+}
 }

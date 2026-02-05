@@ -4,7 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
+use App\Models\Commande;
+use App\Models\Materiel;
 class DetailCommande extends Model
 {
     use HasFactory;

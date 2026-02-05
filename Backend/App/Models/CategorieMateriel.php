@@ -2,17 +2,23 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Materiel;
 
 class CategorieMateriel extends Model
 {
-    protected $table = 'categorie_materiel'; // 
+    use HasFactory;
 
-    protected $fillable = ['nom', 'description']; // [cite: 55]
+    protected $table = 'categorie_materiel';
+
+    protected $fillable = [
+        'nom',
+        'description'
+    ];
 
     public function materiels()
     {
-        // Une catégorie possède plusieurs matériels [cite: 83]
         return $this->hasMany(Materiel::class, 'categorie_id');
     }
 }

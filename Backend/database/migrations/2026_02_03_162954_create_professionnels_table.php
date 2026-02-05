@@ -8,36 +8,39 @@ return new class extends Migration
 {
     public function up(): void
     {
-       Schema::create('professionnels', function (Blueprint $table) {
-    $table->id();
-
-    $table->foreignId('user_id')
-          ->constrained()
-          ->cascadeOnDelete();
-
-    $table->string('nom_societe');
-
-    // 📍 adresses
-    $table->foreignId('adresse_siege_id')
-          ->constrained('adresses')
-          ->restrictOnDelete();
-
-    $table->foreignId('adresse_livraison_id')
-          ->constrained('adresses')
-          ->restrictOnDelete();
-
-    // ⏰ horaires
-    $table->string('heure_ouverture', 100);
-    $table->string('heure_fermeture', 100);
-
-    // 🌍 langue
-    $table->foreignId('langue_id')
-          ->constrained('langues')
-          ->restrictOnDelete();
-
-    $table->timestamps();
-});
-
+        Schema::create('professionnels', function (Blueprint $table) {
+            $table->id();
+            
+            // Clé étrangère vers users
+            $table->foreignId('user_id')
+                  ->constrained()
+                  ->cascadeOnDelete();
+            
+            $table->string('nom_societe');
+            
+            // 📍 adresses - utilisez nullOnDelete() si une adresse peut être supprimée sans supprimer le professionnel
+            $table->foreignId('adresse_siege_id')
+                  ->nullable()
+                  ->constrained('adresses')
+                  ->nullOnDelete();
+            
+            $table->foreignId('adresse_livraison_id')
+                  ->nullable()
+                  ->constrained('adresses')
+                  ->nullOnDelete();
+            
+            // ⏰ horaires - utilisez time() pour stocker des heures
+            $table->time('heure_ouverture')->nullable();
+            $table->time('heure_fermeture')->nullable();
+            
+            // 🌍 langue
+            $table->foreignId('langue_id')
+                  ->nullable()
+                  ->constrained('langues')
+                  ->nullOnDelete();
+            
+            $table->timestamps();
+        });
     }
 
     public function down(): void
