@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Materiel;
 
-class PhotosMateriel extends Model
+class PhotoMateriel extends Model  // Notez le singulier "Photo"
 {
     use HasFactory;
 

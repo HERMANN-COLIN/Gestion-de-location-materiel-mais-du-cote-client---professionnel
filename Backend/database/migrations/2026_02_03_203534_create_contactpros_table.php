@@ -18,7 +18,7 @@ return new class extends Migration
     $table->string('prenom', 100); // [cite: 51]
     $table->string('email')->unique(); // [cite: 51]
     $table->string('telephone', 20); // [cite: 51]
-    $table->foreignId('fonction')->constrained('fonctions'); // Référence à fonctions [cite: 51]
+    $table->foreignId('fonction_id')->constrained('fonctions'); // Référence à fonctions [cite: 51]
     $table->timestamps(); // Gère created_at [cite: 51]
 });
     }

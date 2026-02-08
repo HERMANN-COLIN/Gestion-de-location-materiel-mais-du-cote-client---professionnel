@@ -584,7 +584,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import axios from 'axios'
+import api from '@/services/axios'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -708,33 +708,83 @@ const validateStep2 = () => {
 }
 
 // Chargement des données
+// Modifiez votre loadLangues pour mieux debugger
 const loadLangues = async () => {
   try {
-    const response = await axios.get('/langues')
-    langues.value = Array.isArray(response.data) ? response.data : response.data.data
-    console.log('✅ Langues chargées:', langues.value.length)
+    console.log('🔄 Tentative de chargement des langues...')
+    const response = await api.get('/langues')
+    
+    console.log("Réponse brute:", response)
+    console.log("response.data:", response.data)
+    
+    // Essayer différentes façons d'accéder aux données
+    let languesData = []
+    if (Array.isArray(response.data)) {
+      languesData = response.data
+    } else if (response.data && Array.isArray(response.data.data)) {
+      languesData = response.data.data
+    } else if (response.data && response.data.langues) {
+      languesData = response.data.langues
+    } else {
+      console.warn("Format de données inattendu:", response.data)
+      // Données factices pour le debug
+      languesData = [
+        { id: 1, langue: 'Français' },
+        { id: 2, langue: 'Anglais' },
+        { id: 3, langue: 'Néerlandais' }
+      ]
+    }
+    
+    langues.value = languesData
+    console.log('✅ Langues chargées:', langues.value)
+    
+    // Vérifiez si des options apparaissent
+    setTimeout(() => {
+      const select = document.querySelector('select[v-model="form.langue_id"]')
+      console.log('Select element:', select)
+      console.log('Options count:', select?.options?.length)
+    }, 100)
+    
   } catch (error) {
-    console.error('❌ Erreur langues:', error)
+    console.error('❌ Erreur complète langues:', error)
+    console.error('Response error:', error.response)
+    
+    // Données factices en cas d'erreur
     langues.value = [
       { id: 1, langue: 'Français' },
       { id: 2, langue: 'Anglais' },
-      { id: 3, langue: 'Néerlandais' }
+      { id: 3, langue: 'Néerlandais' },
+      { id: 4, langue: 'Allemand' }
     ]
+    console.log('📝 Utilisation des données factices',langues.value)
   }
 }
 
 const loadFonctions = async () => {
   try {
-    const response = await axios.get('/fonctions')
-    fonctions.value = Array.isArray(response.data) ? response.data : response.data.data
-    console.log('✅ Fonctions chargées:', fonctions.value.length)
+    const response = await api.get('/fonctions');
+    
+    // Récupération directe des données
+    fonctions.value = response.data?.data || response.data || [];
+    
+    console.log('✅ Fonctions chargées:', fonctions.value.length);
+    
+    // Fallback si vide
+    if (fonctions.value.length === 0) {
+      throw new Error('Aucune fonction chargée');
+    }
+    
   } catch (error) {
-    console.error('❌ Erreur fonctions:', error)
+    console.error('❌ Erreur fonctions:', error);
+    
+    // Données correspondant à votre BD
     fonctions.value = [
       { id: 1, fonction: 'Responsable logistique' },
       { id: 2, fonction: 'Directrice commerciale' },
-      { id: 3, fonction: 'Gérant' }
-    ]
+      { id: 3, fonction: 'Gestionnaire de compte' },
+      { id: 4, fonction: 'Responsable événementiel' },
+      { id: 5, fonction: 'Chef de projet' }
+    ];
   }
 }
 

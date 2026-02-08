@@ -2,13 +2,15 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CategorieMaterielController;
 use App\Http\Controllers\Api\MaterielController;
+use App\Http\Controllers\Api\PhotoMaterielController;
 use App\Http\Controllers\Api\CommandeController;
-use App\Http\Controllers\Api\CategorieController;
 use App\Http\Controllers\Api\CommuneController;
 use App\Http\Controllers\Api\LangueController;
 use App\Http\Controllers\Api\FonctionController;
 use App\Http\Controllers\Api\ContactProController;
+use App\Http\Controllers\Api\TypeController;
 
 // ==================== ROUTES PUBLIQUES ====================
 
@@ -16,12 +18,23 @@ use App\Http\Controllers\Api\ContactProController;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Catalogue public
+// Catalogue public - Matériels
 Route::get('/materiels', [MaterielController::class, 'index']);
+Route::get('/materiels/populaires', [MaterielController::class, 'populaires']);
+Route::get('/materiels/recents', [MaterielController::class, 'recents']); // NOUVEAU
 Route::get('/materiels/{id}', [MaterielController::class, 'show']);
+Route::get('/materiels/{id}/disponibilite', [MaterielController::class, 'disponibilite']);
+Route::get('/materiels/search', [MaterielController::class, 'search']);
 
-// Catégories (devrait être public)
-Route::get('/categories', [CategorieController::class, 'index']);
+// Catégories de matériels (publiques) - AJOUT DES NOUVELLES ROUTES
+Route::get('/categories-materiel', [CategorieMaterielController::class, 'index']);
+Route::get('/categories-materiel/avec-vedette', [CategorieMaterielController::class, 'avecVedette']); // NOUVEAU
+Route::get('/categories-materiel/{id}', [CategorieMaterielController::class, 'show']);
+Route::get('/categories-materiel/{id}/materiels', [CategorieMaterielController::class, 'materiels']); // IMPORTANT: Route pour les matériels par catégorie
+Route::get('/categories-materiel/search', [CategorieMaterielController::class, 'search']);
+
+// Photos de matériels (publiques)
+Route::get('/photos-materiel/{materielId}', [PhotoMaterielController::class, 'getByMateriel']);
 
 // Communes (pour le formulaire d'inscription)
 Route::get('/communes', [CommuneController::class, 'index']);
@@ -30,11 +43,9 @@ Route::get('/communes', [CommuneController::class, 'index']);
 Route::get('/langues', [LangueController::class, 'index']);
 
 // Types d'utilisateurs (pour le formulaire d'inscription)
-Route::get('/types', function() {
-    return \App\Models\Type::all();
-});
+Route::get('/types', [TypeController::class, 'index']);
 
-// Routes pour les fonctions (publiques pour la lecture)
+// Fonctions (publiques pour la lecture)
 Route::get('/fonctions', [FonctionController::class, 'index']);
 Route::get('/fonctions/{id}', [FonctionController::class, 'show']);
 
@@ -44,36 +55,25 @@ Route::middleware('auth:sanctum')->group(function () {
     // Authentification
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+    Route::put('/user/profile', [AuthController::class, 'updateProfile']);
     
-    // Matériels (admin seulement)
-    Route::post('/materiels', [MaterielController::class, 'store']);
-    Route::put('/materiels/{id}', [MaterielController::class, 'update']);
-    Route::delete('/materiels/{id}', [MaterielController::class, 'destroy']);
-    
-    // Commandes
-    Route::get('/commandes', [CommandeController::class, 'index']);
-    Route::post('/commandes', [CommandeController::class, 'store']);
-    Route::get('/commandes/{id}', [CommandeController::class, 'show']);
-    
-    // Panier temporaire
-    Route::post('/panier/ajouter', [CommandeController::class, 'ajouterAuPanier']);
-    Route::get('/panier', [CommandeController::class, 'getPanier']);
-    Route::delete('/panier/{itemId}', [CommandeController::class, 'supprimerDuPanier']);
-    
-    // Routes pour les contacts professionnels
-    Route::get('/contacts', [ContactProController::class, 'index']);
-    Route::post('/contacts', [ContactProController::class, 'store']);
-    Route::get('/contacts/{id}', [ContactProController::class, 'show']);
-    Route::put('/contacts/{id}', [ContactProController::class, 'update']);
-    Route::delete('/contacts/{id}', [ContactProController::class, 'destroy']);
-    Route::post('/contacts/{id}/set-primary', [ContactProController::class, 'setAsPrimary']);
-    
-    // Routes admin (optionnelles)
+    // ============ GESTION DES MATÉRIELS (ADMIN) ============
     Route::middleware('admin')->group(function () {
-        // Catégories admin
-        Route::post('/categories', [CategorieController::class, 'store']);
-        Route::put('/categories/{id}', [CategorieController::class, 'update']);
-        Route::delete('/categories/{id}', [CategorieController::class, 'destroy']);
+        // Matériels
+        Route::post('/materiels', [MaterielController::class, 'store']);
+        Route::put('/materiels/{id}', [MaterielController::class, 'update']);
+        Route::delete('/materiels/{id}', [MaterielController::class, 'destroy']);
+        Route::post('/materiels/{id}/stock', [MaterielController::class, 'updateStock']);
+        
+        // Catégories de matériels
+        Route::post('/categories-materiel', [CategorieMaterielController::class, 'store']);
+        Route::put('/categories-materiel/{id}', [CategorieMaterielController::class, 'update']);
+        Route::delete('/categories-materiel/{id}', [CategorieMaterielController::class, 'destroy']);
+        
+        // Photos de matériels
+        Route::post('/photos-materiel', [PhotoMaterielController::class, 'store']);
+        Route::put('/photos-materiel/{id}', [PhotoMaterielController::class, 'update']);
+        Route::delete('/photos-materiel/{id}', [PhotoMaterielController::class, 'destroy']);
         
         // Fonctions admin (compléments)
         Route::post('/fonctions', [FonctionController::class, 'store']);
@@ -81,5 +81,34 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/fonctions/{id}', [FonctionController::class, 'destroy']);
         Route::get('/fonctions/search', [FonctionController::class, 'search']);
         Route::get('/fonctions/stats/with-count', [FonctionController::class, 'withStats']);
+    });
+    
+    // ============ COMMANDES ET PANIER (CLIENTS) ============
+    Route::prefix('commandes')->group(function () {
+        Route::get('/', [CommandeController::class, 'index']);
+        Route::post('/', [CommandeController::class, 'store']);
+        Route::get('/{id}', [CommandeController::class, 'show']);
+        Route::put('/{id}/annuler', [CommandeController::class, 'annuler']);
+        Route::get('/{id}/facture', [CommandeController::class, 'genererFacture']);
+    });
+    
+    // Panier
+    Route::prefix('panier')->group(function () {
+        Route::get('/', [CommandeController::class, 'getPanier']);
+        Route::post('/ajouter', [CommandeController::class, 'ajouterAuPanier']);
+        Route::put('/mise-a-jour/{itemId}', [CommandeController::class, 'mettreAJourPanier']);
+        Route::delete('/supprimer/{itemId}', [CommandeController::class, 'supprimerDuPanier']);
+        Route::delete('/vider', [CommandeController::class, 'viderPanier']);
+        Route::post('/valider', [CommandeController::class, 'validerPanier']);
+    });
+    
+    // ============ CONTACTS PROFESSIONNELS ============
+    Route::prefix('contacts')->group(function () {
+        Route::get('/', [ContactProController::class, 'index']);
+        Route::post('/', [ContactProController::class, 'store']);
+        Route::get('/{id}', [ContactProController::class, 'show']);
+        Route::put('/{id}', [ContactProController::class, 'update']);
+        Route::delete('/{id}', [ContactProController::class, 'destroy']);
+        Route::post('/{id}/set-primary', [ContactProController::class, 'setAsPrimary']);
     });
 });

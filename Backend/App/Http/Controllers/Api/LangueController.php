@@ -8,10 +8,10 @@ use Illuminate\Http\Request;
 
 class LangueController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        $langues = Langue::orderBy('langue')->get();
-        
-         return response()->json($langues);
+        return response()->json(
+            Langue::orderBy('langue', 'asc')->get()
+        );
     }
 }

@@ -28,6 +28,30 @@ class Materiel extends Model
 
     public function photos()
     {
-        return $this->hasMany(PhotoMateriel::class);
+        return $this->hasMany(PhotoMateriel::class); // ou PhotosMateriel::class selon votre choix
+    }
+    
+    /**
+     * Accessor pour le prix formaté
+     */
+    public function getPrixFormateAttribute()
+    {
+        return number_format($this->prix_journalier, 2, ',', ' ') . ' €/jour';
+    }
+    
+    /**
+     * Vérifie si le matériel est disponible
+     */
+    public function estDisponible()
+    {
+        return $this->stock_disponible > 0;
+    }
+    
+    /**
+     * Scope pour les matériels disponibles
+     */
+    public function scopeDisponibles($query)
+    {
+        return $query->where('stock_disponible', '>', 0);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ContactPro;
+use App\Models\Professionnel;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 

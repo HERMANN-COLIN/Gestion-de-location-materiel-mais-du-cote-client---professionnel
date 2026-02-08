@@ -146,23 +146,7 @@
       </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="home-footer">
-      <div class="footer-content">
-        <div class="footer-brand">
-          <div class="footer-logo">📦 LocationMatériel</div>
-          <p class="footer-tagline">Votre partenaire de confiance pour la location événementielle</p>
-        </div>
-        <div class="footer-links">
-          <router-link to="/catalogue" class="footer-link">Catalogue</router-link>
-          <router-link to="/login" class="footer-link">Connexion</router-link>
-          <router-link to="/register" class="footer-link">Inscription</router-link>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <p>&copy; 2024 LocationMatériel. Tous droits réservés.</p>
-      </div>
-    </footer>
+  
   </div>
 </template>
 

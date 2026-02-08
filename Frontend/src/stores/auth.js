@@ -42,13 +42,16 @@ export const useAuthStore = defineStore('auth', {
           error.response?.data?.message ||
           'Erreur lors de l’inscription'
 
-        if (error.response?.status === 422) {
-          return {
-            success: false,
-            error: this.error,
-            validationErrors: error.response?.data?.errors
-          }
-        }
+       if (error.response?.status === 422) {
+  console.log('🧨 Erreurs de validation Laravel:', error.response.data.errors)
+
+  return {
+    success: false,
+    error: this.error,
+    validationErrors: error.response.data.errors
+  }
+}
+
 
         return { success: false, error: this.error }
       } finally {

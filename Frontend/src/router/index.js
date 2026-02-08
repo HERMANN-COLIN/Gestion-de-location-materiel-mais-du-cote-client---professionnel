@@ -11,8 +11,18 @@ const routes = [
         name: 'Catalogue',
         component: () => import('../views/Catalogue.vue'),
     },
+     {
+    path: '/profil',
+    name: 'profile',
+    component: () => import('../components/Profil.vue'),
+    meta: { 
+      title: 'Mon Profil',
+      requiresAuth: true 
+    }
+  },
+    
     {
-        path: '/materiel/:id',
+        path: '/materiels/:id',
         name: 'MaterielDetail',
         component: () => import('../views/MaterielDetail.vue'),
         props: true,
@@ -27,6 +37,12 @@ const routes = [
         path: '/login',
         name: 'Login',
         component: () => import('../components/Login.vue'),
+        meta: { guestOnly: true },
+    },
+     {
+        path: '/footer',
+        name: 'Footer',
+        component: () => import('../components/Footer.vue'),
         meta: { guestOnly: true },
     },
     {

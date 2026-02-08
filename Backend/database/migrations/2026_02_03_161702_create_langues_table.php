@@ -10,9 +10,17 @@ return new class extends Migration
     {
         Schema::create('langues', function (Blueprint $table) {
             $table->id();
-            $table->string('langue'); // ex: FR, EN, NL
+            $table->string('langue')->unique();
             $table->timestamps();
         });
+        
+        // Optionnel : insérer des données de test
+        DB::table('langues')->insert([
+            ['langue' => 'Français'],
+            ['langue' => 'Anglais'],
+            ['langue' => 'Néerlandais'],
+            ['langue' => 'Allemand'],
+        ]);
     }
 
     public function down(): void
