@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -16,6 +17,13 @@ return new class extends Migration
     $table->string('statut'); // [cite: 63]
     $table->timestamps();
         });
+        // Insertion des statuts par défaut
+        DB::table('statuts')->insert([
+            ['statut' => 'En attente', 'created_at' => now(), 'updated_at' => now()],
+            ['statut' => 'Confirmé', 'created_at' => now(), 'updated_at' => now()],
+            ['statut' => 'Livré', 'created_at' => now(), 'updated_at' => now()],
+
+        ]);
     }
 
     /**

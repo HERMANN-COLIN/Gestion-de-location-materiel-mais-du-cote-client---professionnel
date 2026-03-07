@@ -1,414 +1,219 @@
 <template>
   <div class="catalogue-container">
-    <!-- Hero Section -->
-    <div class="hero-section">
-      <div class="hero-content">
-        <h1 class="hero-title">Catalogue des matériels</h1>
-        <p class="hero-subtitle">Trouvez le matériel idéal pour rendre vos événements inoubliables</p>
-        <div class="hero-stats">
-          <div class="stat-item">
-            <span class="stat-number">{{ categoriesCount }}</span>
-            <span class="stat-label">Catégories</span>
-          </div>
-          <div class="stat-divider">•</div>
-          <div class="stat-item">
-            <span class="stat-number">{{ totalMaterials }}</span>
-            <span class="stat-label">Matériels</span>
-          </div>
-          <div class="stat-divider">•</div>
-          <div class="stat-item">
-            <span class="stat-number">24h</span>
-            <span class="stat-label">Livraison</span>
-          </div>
-        </div>
-      </div>
-      <div class="hero-decoration">
-        <div class="decoration-circle circle-1"></div>
-        <div class="decoration-circle circle-2"></div>
-        <div class="decoration-circle circle-3"></div>
-      </div>
+    <!-- En-tête -->
+    <div class="catalogue-header">
+      <h1>Catalogue des matériels</h1>
+      <p>Trouvez le matériel idéal pour vos événements</p>
     </div>
 
     <!-- Filtres et recherche -->
-    <div class="filters-card">
-      <div class="filters-header">
-        <h3><span class="icon">🔍</span> Affinez votre recherche</h3>
-        <p>Trouvez exactement ce dont vous avez besoin</p>
-      </div>
-      
-      <div class="filters-grid">
+    <div class="filters-section">
+      <div class="filters-row">
         <div class="filter-group">
-          <label for="categorie" class="filter-label">
-            <span class="filter-icon">📁</span>
-            Catégorie
-          </label>
-          <div class="select-wrapper">
-            <select 
-              id="categorie" 
-              v-model="selectedCategorie" 
-              @change="filterByCategorie"
-              class="filter-select"
-            >
-              <option value="">Toutes les catégories</option>
-              <option 
-                v-for="categorie in filteredCategories" 
-                :key="categorie.id" 
-                :value="categorie.id"
-              >
-                {{ categorie.nom }}
-              </option>
-            </select>
-            <span class="select-arrow">▼</span>
-          </div>
-        </div>
-
-        <div class="filter-group">
-          <label for="prix-min" class="filter-label">
-            <span class="filter-icon">💰</span>
-            Prix min
-          </label>
-          <div class="input-wrapper">
-            <span class="input-prefix">€</span>
-            <input 
-              id="prix-min" 
-              type="number" 
-              v-model.number="prixMin" 
-              placeholder="0"
-              min="0"
-              class="filter-input"
-              @input="filterByPrice"
-            >
-          </div>
-        </div>
-
-        <div class="filter-group">
-          <label for="prix-max" class="filter-label">
-            <span class="filter-icon">💎</span>
-            Prix max
-          </label>
-          <div class="input-wrapper">
-            <span class="input-prefix">€</span>
-            <input 
-              id="prix-max" 
-              type="number" 
-              v-model.number="prixMax" 
-              placeholder="100"
-              min="0"
-              class="filter-input"
-              @input="filterByPrice"
-            >
-          </div>
-        </div>
-
-       
-
-        <div class="filter-actions">
-          <button @click="resetFilters" class="reset-btn">
-            <span class="btn-icon">🔄</span>
-            Réinitialiser
-          </button>
-          <button @click="applyFilters" class="apply-btn">
-            <span class="btn-icon">✨</span>
-            Appliquer
-          </button>
-        </div>
-      </div>
-
-      <!-- Filtres rapides par catégorie -->
-      <div class="quick-filters" v-if="!selectedCategorie">
-        <h4>Parcourir par catégorie :</h4>
-        <div class="category-chips">
-          <button 
-            v-for="categorie in filteredCategories" 
-            :key="categorie.id"
-            @click="selectCategory(categorie.id)"
-            class="category-chip"
+          <label for="categorie">Catégorie</label>
+          <select 
+            id="categorie" 
+            v-model="selectedCategorie" 
+            @change="filterByCategorie" 
+            class="filter-select"
           >
-            <span class="chip-icon">{{ getCategoryIcon(categorie.nom) }}</span>
-            {{ categorie.nom }}
-          </button>
+            <option value="">Toutes les catégories</option>
+            <option 
+              v-for="cat in filteredCategories" 
+              :key="cat.id" 
+              :value="cat.id"
+            >
+              {{ cat.nom }}
+            </option>
+          </select>
         </div>
+
+        <div class="filter-group">
+          <label for="prix-min">Prix min (€ HT/jour)</label>
+          <input 
+            id="prix-min" 
+            type="number" 
+            v-model.number="prixMin" 
+            placeholder="0" 
+            min="0" 
+            class="filter-input" 
+            @input="filterByPrice"
+          >
+        </div>
+
+        <div class="filter-group">
+          <label for="prix-max">Prix max (€ HT/jour)</label>
+          <input 
+            id="prix-max" 
+            type="number" 
+            v-model.number="prixMax" 
+            placeholder="100" 
+            min="0" 
+            class="filter-input" 
+            @input="filterByPrice"
+          >
+        </div>
+
+        <div class="filter-group search-group">
+          <label for="search">Recherche</label>
+          <div class="search-wrapper">
+            <input 
+              id="search" 
+              type="text" 
+              v-model="searchQuery" 
+              placeholder="Rechercher un matériel..." 
+              @input="searchMateriels" 
+              class="search-input"
+            >
+            <span class="search-icon">🔍</span>
+          </div>
+        </div>
+
+        <button @click="resetFilters" class="reset-btn">Réinitialiser</button>
       </div>
 
       <!-- Statistiques -->
-      <div class="stats-container">
-        <div class="stat-card">
-          <div class="stat-icon">📊</div>
-          <div class="stat-content">
-            <div class="stat-number">{{ pagination.total || 0 }}</div>
-            <div class="stat-label">Matériels trouvés</div>
-          </div>
-        </div>
-        <div class="stat-card" v-if="selectedCategorie && selectedCategorieName">
-          <div class="stat-icon">🏷️</div>
-          <div class="stat-content">
-            <div class="stat-number">{{ selectedCategorieName }}</div>
-            <div class="stat-label">Catégorie sélectionnée</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon">📄</div>
-          <div class="stat-content">
-            <div class="stat-number">{{ pagination.current_page }}</div>
-            <div class="stat-label">Page sur {{ pagination.last_page }}</div>
-          </div>
-        </div>
+      <div class="stats">
+        <span class="stat-item">
+          <span class="stat-number">{{ pagination.total || 0 }}</span> matériels
+        </span>
+        <span v-if="selectedCategorieName" class="stat-item">
+          Catégorie : <span class="stat-number">{{ selectedCategorieName }}</span>
+        </span>
+        <span class="stat-item">
+          Page <span class="stat-number">{{ pagination.current_page }}</span> sur {{ pagination.last_page }}
+        </span>
       </div>
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="loading-container">
-      <div class="loading-spinner">
-        <div class="spinner-ring"></div>
-        <div class="spinner-ring"></div>
-        <div class="spinner-ring"></div>
-      </div>
-      <p class="loading-text">Chargement des matériels...</p>
-      <p class="loading-subtext">Patience, ça arrive !</p>
+    <div v-if="loading" class="loading-indicator">
+      <div class="spinner"></div>
+      <p>Chargement des matériels...</p>
     </div>
 
     <!-- Liste des matériels -->
     <div v-else class="materiels-section">
       <!-- Message si aucun résultat -->
-      <div v-if="materiels.length === 0" class="no-results-container">
-        <div class="no-results-illustration">
-          <div class="illustration">🔍</div>
-        </div>
-        <div class="no-results-content">
-          <h3 class="no-results-title">Oups ! Aucun matériel trouvé</h3>
-          <p class="no-results-description">
-            Essayez de modifier vos critères de recherche ou consultez toutes nos catégories
-          </p>
-          <div class="no-results-actions">
-            <button @click="resetFilters" class="primary-btn">
-              <span class="btn-icon">📦</span>
-              Voir tous les matériels
-            </button>
-            <button @click="contactSupport" class="secondary-btn">
-              <span class="btn-icon">💬</span>
-              Demander de l'aide
-            </button>
-          </div>
-        </div>
+      <div v-if="filteredMateriels.length === 0" class="no-results">
+        <div class="no-results-icon">😕</div>
+        <h3>Aucun matériel trouvé</h3>
+        <p>Essayez de modifier vos critères de recherche</p>
+        <button @click="resetFilters" class="primary-btn">Voir tous les matériels</button>
       </div>
 
       <!-- Grille des matériels -->
-      <div v-else>
-        <div class="results-header">
-          <h2 class="results-title">Nos matériels disponibles</h2>
-          <div class="sort-options">
-            <span class="sort-label">Trier par :</span>
-            <select v-model="sortBy" @change="applySort" class="sort-select">
-              <option value="nom">Nom (A-Z)</option>
-              <option value="prix_journalier-asc">Prix (Croissant)</option>
-              <option value="prix_journalier-desc">Prix (Décroissant)</option>
-              <option value="stock_disponible-desc">Disponibilité</option>
-              <option value="created_at-desc">Nouveautés</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="materiels-grid">
-          <div 
-            v-for="materiel in filteredMateriels"
-            :key="materiel.id" 
-            class="materiel-card"
-            @click="goToDetail(materiel.id)"
-          >
-            <div class="materiel-image">
-              <img 
-                :src="getPhotoUrl(materiel)" 
-                :alt="materiel.nom"
-                @error="setDefaultImage"
-                class="product-image"
-              >
-              
-              <!-- Badges -->
-              <div class="card-badges">
-                <div class="stock-badge" :class="{ 
-                  'in-stock': materiel.stock_disponible > 0, 
-                  'low-stock': materiel.stock_disponible < 10 && materiel.stock_disponible > 0,
-                  'out-of-stock': materiel.stock_disponible === 0 
-                }">
-                  <span class="badge-icon">
-                    <span v-if="materiel.stock_disponible > 0">✓</span>
-                    <span v-else>✗</span>
-                  </span>
-                  {{ materiel.stock_disponible > 0 ? `${materiel.stock_disponible} dispo` : 'Rupture' }}
-                </div>
-                <div v-if="isNew(materiel)" class="new-badge">
-                  <span class="badge-icon">🎉</span>
-                  Nouveau
-                </div>
-                <div v-if="materiel.prix_journalier < 5" class="promo-badge">
-                  <span class="badge-icon">🔥</span>
-                  Bon plan
-                </div>
-              </div>
-              
-              <!-- Quick Actions -->
-              <div class="quick-actions">
-                <button 
-                  @click.stop="addToCart(materiel)" 
-                  :disabled="!materiel.stock_disponible || materiel.stock_disponible === 0"
-                  class="quick-cart-btn"
-                  :title="materiel.stock_disponible > 0 ? 'Ajouter au panier' : 'Indisponible'"
-                >
-                  <span class="quick-icon">🛒</span>
-                </button>
-                <button 
-                  @click.stop="toggleFavorite(materiel)"
-                  class="quick-fav-btn"
-                  :class="{ 'favorited': isFavorite(materiel.id) }"
-                  title="Ajouter aux favoris"
-                >
-                  <span class="quick-icon">{{ isFavorite(materiel.id) ? '❤️' : '🤍' }}</span>
-                </button>
-              </div>
-            </div>
-            
-            <div class="materiel-info">
-              <div class="materiel-header">
-                <h3 class="materiel-title">{{ materiel.nom || 'Sans nom' }}</h3>
-                <span class="categorie-tag">
-                  <span class="tag-icon">{{ getCategoryIcon(materiel.categorie?.nom) }}</span>
-                  {{ materiel.categorie?.nom || 'Non catégorisé' }}
-                </span>
-              </div>
-              
-              <p class="materiel-description">
-                {{ truncateDescription(materiel.description) }}
-              </p>
-              
-              <div class="materiel-details">
-                <div class="price-section">
-                  <div class="price-wrapper">
-                    <span class="price">{{ formatPrice(materiel.prix_journalier) }}</span>
-                    <span class="price-period">/jour</span>
-                  </div>
-                  <div v-if="materiel.prix_journalier < 10" class="price-note">
-                    ⭐ Location économique
-                  </div>
-                </div>
-                <span v-if="materiel.dimensions" class="dimensions">
-                  <span class="dim-icon">📏</span>
-                  {{ materiel.dimensions }}
-                </span>
-              </div>
-
-              <div class="materiel-actions">
-                <button 
-                  @click.stop="addToCart(materiel)" 
-                  :disabled="!materiel.stock_disponible || materiel.stock_disponible === 0"
-                  class="add-to-cart-btn"
-                  :class="{ 'disabled': !materiel.stock_disponible || materiel.stock_disponible === 0 }"
-                >
-                  <span class="cart-icon">🛒</span>
-                  {{ materiel.stock_disponible > 0 ? 'Ajouter au panier' : 'Indisponible' }}
-                </button>
-                
-                <router-link 
-                  v-if="materiel.id"
-                  :to="`/materiels/${materiel.id}`" 
-                  class="details-btn"
-                  @click.stop
-                >
-                  <span class="details-icon">👁️</span>
-                  Voir détails
-                </router-link>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Pagination -->
-        <div v-if="pagination.last_page > 1" class="pagination-container">
-          <div class="pagination">
-            <button 
-              @click="prevPage" 
-              :disabled="pagination.current_page === 1"
-              class="pagination-btn prev-btn"
+      <div v-else class="materiels-grid">
+        <div 
+          v-for="materiel in filteredMateriels" 
+          :key="materiel.id" 
+          class="materiel-card" 
+          @click="goToDetail(materiel.id)"
+        >
+          <div class="materiel-image">
+            <img 
+              :src="getPhotoUrl(materiel)" 
+              :alt="materiel.nom" 
+              @error="(e) => handleImageError(e, materiel)"
             >
-              <span class="btn-icon">←</span>
-              Précédent
-            </button>
+            <!-- Badges -->
+            <div class="card-badges">
+              <div class="stock-badge" :class="{
+                'in-stock': materiel.stock_disponible > 10,
+                'low-stock': materiel.stock_disponible <= 10 && materiel.stock_disponible > 0,
+                'out-of-stock': materiel.stock_disponible === 0
+              }">
+                {{ materiel.stock_disponible > 0 ? `${materiel.stock_disponible} dispo` : 'Rupture' }}
+              </div>
+              <div v-if="materiel.is_new" class="new-badge">Nouveau</div>
+            </div>
+          </div>
+          
+          <div class="materiel-info">
+            <div class="materiel-header">
+              <h3 class="materiel-title">{{ materiel.nom || 'Sans nom' }}</h3>
+              <span class="categorie-tag">{{ materiel.categorie?.nom || 'Non catégorisé' }}</span>
+            </div>
             
-            <div class="page-numbers">
+            <p class="materiel-description">{{ truncateDescription(materiel.description) }}</p>
+            
+            <div class="materiel-details">
+              <div class="price-section">
+                <!-- Prix HT -->
+                <div class="prices">
+                  <span class="price">{{ formatPrice(getPrixHT(materiel)) }}</span>
+                  <span class="price-period"> HT/jour</span>
+                </div>
+                <!-- Prix TTC -->
+                <div class="price-ttc">soit {{ formatPrice(getPrixTTC(materiel)) }} TTC/jour</div>
+              </div>
+              <span v-if="materiel.dimensions" class="dimensions">📏 {{ materiel.dimensions }}</span>
+            </div>
+
+            <div class="materiel-actions">
               <button 
-                v-for="page in visiblePages" 
-                :key="page"
-                @click="goToPage(page)"
-                class="page-btn"
-                :class="{ 'active': page === pagination.current_page }"
+                @click.stop="addToCart(materiel)" 
+                :disabled="materiel.stock_disponible === 0 || addingToCart === materiel.id"
+                class="add-to-cart-btn" 
+                :class="{ 
+                  disabled: materiel.stock_disponible === 0,
+                  loading: addingToCart === materiel.id
+                }"
               >
-                {{ page }}
+                <span v-if="addingToCart === materiel.id" class="spinner-small"></span>
+                <span v-else>🛒</span>
+                {{ getButtonText(materiel) }}
               </button>
-              <span v-if="showEllipsis" class="ellipsis">...</span>
+              <router-link 
+                :to="`/materiels/${materiel.id}`" 
+                class="details-btn" 
+                @click.stop
+              >
+                Détails
+              </router-link>
             </div>
-            
-            <button 
-              @click="nextPage" 
-              :disabled="pagination.current_page === pagination.last_page"
-              class="pagination-btn next-btn"
-            >
-              Suivant
-              <span class="btn-icon">→</span>
-            </button>
           </div>
         </div>
       </div>
+
+      <!-- Pagination -->
+      <div v-if="pagination.last_page > 1" class="pagination">
+        <button 
+          @click="prevPage" 
+          :disabled="pagination.current_page === 1" 
+          class="pagination-btn"
+        >
+          ← Précédent
+        </button>
+        
+        <div class="page-numbers">
+          <button 
+            v-for="page in visiblePages" 
+            :key="page"
+            @click="goToPage(page)"
+            class="page-btn" 
+            :class="{ active: page === pagination.current_page }"
+          >
+            {{ page }}
+          </button>
+          <span v-if="showEllipsis" class="ellipsis">...</span>
+        </div>
+        
+        <button 
+          @click="nextPage" 
+          :disabled="pagination.current_page === pagination.last_page" 
+          class="pagination-btn"
+        >
+          Suivant →
+        </button>
+      </div>
     </div>
 
-    <!-- CTA Section -->
+    <!-- CTA -->
     <div class="cta-section">
-      <div class="cta-content">
-        <div class="cta-text">
-          <h2 class="cta-title">Besoin d'aide pour choisir ?</h2>
-          <p class="cta-description">
-            Notre équipe d'experts est à votre disposition pour vous conseiller 
-            et vous accompagner dans l'organisation de votre événement.
-          </p>
-          <div class="cta-features">
-            <div class="feature">
-              <span class="feature-icon">🤝</span>
-              <span>Conseil personnalisé</span>
-            </div>
-            <div class="feature">
-              <span class="feature-icon">🚚</span>
-              <span>Livraison rapide</span>
-            </div>
-            <div class="feature">
-              <span class="feature-icon">💬</span>
-              <span>Support 7j/7</span>
-            </div>
-          </div>
-        </div>
-        <div class="cta-actions">
-          <button @click="contactSupport" class="contact-btn">
-            <span class="btn-icon">📞</span>
-            Nous contacter
-          </button>
-          <button @click="showHelpModal" class="help-btn">
-            <span class="btn-icon">❓</span>
-            Demander conseil
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Newsletter -->
-    <div class="newsletter-section">
-      <div class="newsletter-content">
-        <div class="newsletter-icon">📧</div>
-        <div class="newsletter-text">
-          <h3>Ne manquez pas nos nouveautés</h3>
-          <p>Inscrivez-vous à notre newsletter pour recevoir les offres exclusives</p>
-        </div>
-        <div class="newsletter-form">
-          <input type="email" placeholder="Votre email" class="newsletter-input">
-          <button class="newsletter-btn">S'inscrire</button>
-        </div>
-      </div>
+      <h2>Besoin d'aide pour choisir ?</h2>
+      <p>Notre équipe est à votre disposition pour vous conseiller</p>
+      <button @click="contactSupport" class="contact-btn">📞 Nous contacter</button>
     </div>
   </div>
 </template>
@@ -416,12 +221,14 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import api from '@/services/axios'
-import { getMaterielPhotoUrl } from '@/utils/imageHelper'
 
 const router = useRouter()
+const auth = useAuthStore()
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 
-// Réactifs
+// États
 const categories = ref([])
 const materiels = ref([])
 const selectedCategorie = ref('')
@@ -429,8 +236,7 @@ const searchQuery = ref('')
 const prixMin = ref('')
 const prixMax = ref('')
 const loading = ref(false)
-const sortBy = ref('nom')
-const favorites = ref(new Set())
+const addingToCart = ref(null)
 
 const pagination = ref({
   current_page: 1,
@@ -439,172 +245,180 @@ const pagination = ref({
   per_page: 12
 })
 
-// Computed properties
-const filteredCategories = computed(() => {
-  return categories.value.filter(cat => cat && cat.id && cat.nom)
-})
+// Computed
+const filteredCategories = computed(() => 
+  categories.value.filter(c => c?.id && c?.nom)
+)
 
-const categoriesCount = computed(() => {
-  return filteredCategories.value.length
-})
+const filteredMateriels = computed(() => 
+  materiels.value.filter(m => m?.id)
+)
 
-const totalMaterials = computed(() => {
-  return pagination.value.total
-})
+const selectedCategorieName = computed(() =>
+  categories.value.find(c => c?.id == selectedCategorie.value)?.nom || ''
+)
 
-const selectedCategorieName = computed(() => {
-  if (!selectedCategorie.value || !categories.value.length) return ''
-  const categorie = categories.value.find(c => c && c.id == selectedCategorie.value)
-  return categorie ? categorie.nom : ''
-})
-
-const filteredMateriels = computed(() => {
-  return materiels.value.filter(m => m && m.id)
-})
-
-// Pages visibles dans la pagination
 const visiblePages = computed(() => {
-  const pages = []
-  const current = pagination.value.current_page
+  const cur = pagination.value.current_page
   const last = pagination.value.last_page
-  const maxVisible = 5
-
-  let start = Math.max(1, current - Math.floor(maxVisible / 2))
-  let end = Math.min(last, start + maxVisible - 1)
-
-  if (end - start + 1 < maxVisible) {
-    start = Math.max(1, end - maxVisible + 1)
+  const max = 5
+  
+  let start = Math.max(1, cur - Math.floor(max / 2))
+  let end = Math.min(last, start + max - 1)
+  
+  if (end - start + 1 < max) {
+    start = Math.max(1, end - max + 1)
   }
-
-  for (let i = start; i <= end; i++) {
-    pages.push(i)
-  }
-
+  
+  const pages = []
+  for (let i = start; i <= end; i++) pages.push(i)
   return pages
 })
 
-const showEllipsis = computed(() => {
-  return pagination.value.last_page > visiblePages.value.length
-})
+const showEllipsis = computed(() => 
+  pagination.value.last_page > visiblePages.value.length
+)
 
-// Charger les catégories
+// ==================== GESTION DES PRIX ====================
+
+const getPrixHT = (m) => {
+  if (!m) return 0
+  return parseFloat(m?.prix_journalier_ht ?? m?.prix_journalier ?? 0) || 0
+}
+
+const getPrixTTC = (m) => {
+  if (!m) return 0
+  const ht = getPrixHT(m)
+  const tva = parseFloat(m?.taux_tva ?? 20) / 100
+  return ht * (1 + tva)
+}
+
+const formatPrice = (v) => {
+  if (v == null || isNaN(v)) return '0,00 €'
+  return new Intl.NumberFormat('fr-FR', { 
+    style: 'currency', 
+    currency: 'EUR', 
+    minimumFractionDigits: 2 
+  }).format(v)
+}
+
+// ==================== GESTION DES IMAGES ====================
+
+const getInitialsImage = (nom = '') => {
+  const initial = nom.charAt(0).toUpperCase() || '?'
+  let hash = 0
+  for (let i = 0; i < nom.length; i++) {
+    hash = nom.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const color = `hsl(${Math.abs(hash % 360)}, 70%, 80%)`
+  
+  return `data:image/svg+xml;utf8,${encodeURIComponent(`
+    <svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'>
+      <rect width='200' height='200' fill='${color}'/>
+      <text x='100' y='130' font-size='80' text-anchor='middle' fill='#333' font-family='Arial'>${initial}</text>
+    </svg>
+  `)}`
+}
+
+const buildUrl = (path) => {
+  if (!path) return null
+  const p = String(path).trim()
+  if (p.startsWith('http')) return p
+  if (p.startsWith('/')) return `${BASE_URL}${p}`
+  return `${BASE_URL}/storage/${p.replace(/^storage\//, '')}`
+}
+
+const getPhotoUrl = (m) => {
+  if (!m) return getInitialsImage()
+  
+  if (m.main_photo) return m.main_photo
+  
+  if (Array.isArray(m.photos) && m.photos.length) {
+    for (const p of m.photos) {
+      const url = buildUrl(p?.url_photo || p?.chemin_fichier || (typeof p === 'string' ? p : null))
+      if (url) return url
+    }
+  }
+  
+  if (m.photo) return buildUrl(m.photo)
+  
+  return getInitialsImage(m.nom)
+}
+
+const handleImageError = (e, m) => {
+  if (e.target.src.startsWith('data:')) return
+  e.target.onerror = null
+  e.target.src = getInitialsImage(m?.nom)
+}
+
+// ==================== CHARGEMENT DES DONNÉES ====================
+
 const loadCategories = async () => {
   try {
-    const response = await api.get('/categories-materiel')
-    
-    let categoriesData = []
-    
-    if (response.data && response.data.success && Array.isArray(response.data.data)) {
-      categoriesData = response.data.data
-    } else if (Array.isArray(response.data)) {
-      categoriesData = response.data
-    } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
-      categoriesData = response.data.data
-    }
-    
-    categories.value = categoriesData.filter(cat => cat && cat.id && cat.nom)
-  } catch (error) {
-    console.error('Erreur chargement catégories:', error)
-    categories.value = []
+    const res = await api.get('/categories-materiel')
+    const raw = res.data?.data ?? res.data
+    categories.value = (Array.isArray(raw) ? raw : []).filter(c => c?.id && c?.nom)
+  } catch (e) { 
+    console.error('❌ Erreur chargement catégories:', e) 
+    categories.value = [] 
   }
 }
 
-// Charger les matériels
 const loadMateriels = async (page = 1) => {
   loading.value = true
   try {
     let url = `/materiels?page=${page}&per_page=${pagination.value.per_page}`
-    
-    if (selectedCategorie.value) {
-      url += `&categorie_id=${selectedCategorie.value}`
-    }
-    if (prixMin.value) {
-      url += `&prix_min=${prixMin.value}`
-    }
-    if (prixMax.value) {
-      url += `&prix_max=${prixMax.value}`
-    }
-    
-    // Ajouter le tri
-    const [sortField, sortOrder] = sortBy.value.split('-')
-    url += `&sort=${sortField}&order=${sortOrder || 'asc'}`
-    
-    const response = await api.get(url)
-    const data = response.data
-    
-    let materielsData = []
-    let paginationData = {
-      current_page: 1,
-      last_page: 1,
-      total: 0,
-      per_page: 12
-    }
-    
-    if (data && data.success && data.data) {
-      materielsData = Array.isArray(data.data) ? data.data : []
-      paginationData = {
-        current_page: data.current_page || 1,
-        last_page: data.last_page || 1,
-        total: data.total || 0,
-        per_page: data.per_page || 12
+    if (selectedCategorie.value) url += `&categorie_id=${selectedCategorie.value}`
+    if (prixMin.value !== '') url += `&prix_min=${prixMin.value}`
+    if (prixMax.value !== '') url += `&prix_max=${prixMax.value}`
+
+    const res = await api.get(url)
+    const data = res.data
+
+    let items = []
+    let pag = { current_page: 1, last_page: 1, total: 0, per_page: 12 }
+
+    if (data?.success && Array.isArray(data.data)) {
+      items = data.data
+      pag = { ...pag, ...(data.pagination ?? {}) }
+    } else if (Array.isArray(data?.data)) {
+      items = data.data
+      pag = { 
+        current_page: data.current_page ?? 1, 
+        last_page: data.last_page ?? 1, 
+        total: data.total ?? items.length, 
+        per_page: data.per_page ?? 12 
       }
     } else if (Array.isArray(data)) {
-      materielsData = data
-      paginationData = {
-        current_page: 1,
-        last_page: 1,
-        total: data.length,
-        per_page: 12
-      }
-    } else if (data && data.data && Array.isArray(data.data)) {
-      materielsData = data.data
-      paginationData = {
-        current_page: data.current_page || 1,
-        last_page: data.last_page || 1,
-        total: data.total || data.data.length,
-        per_page: data.per_page || 12
-      }
+      items = data
+      pag.total = items.length
     }
+
+    materiels.value = items.filter(m => m?.id)
+    pagination.value = pag
     
-    materiels.value = materielsData.filter(m => m && m.id)
-    pagination.value = paginationData
-    
-  } catch (error) {
-    console.error('Erreur chargement matériels:', error)
+    console.log('✅ Matériels chargés:', materiels.value.length)
+  } catch (e) {
+    console.error('❌ Erreur chargement matériels:', e)
     materiels.value = []
-    pagination.value = {
-      current_page: 1,
-      last_page: 1,
-      total: 0,
-      per_page: 12
-    }
   } finally {
     loading.value = false
   }
 }
 
-// Filtrage
-const filterByCategorie = () => {
-  pagination.value.current_page = 1
-  loadMateriels()
-}
+// ==================== FILTRES ====================
 
-const selectCategory = (categoryId) => {
-  selectedCategorie.value = categoryId
-  filterByCategorie()
+const filterByCategorie = () => { 
+  pagination.value.current_page = 1 
+  loadMateriels() 
 }
 
 const filterByPrice = () => {
-  clearTimeout(window.priceFilterTimeout)
-  window.priceFilterTimeout = setTimeout(() => {
-    pagination.value.current_page = 1
-    loadMateriels()
+  clearTimeout(window._pfT)
+  window._pfT = setTimeout(() => { 
+    pagination.value.current_page = 1 
+    loadMateriels() 
   }, 500)
-}
-
-const applyFilters = () => {
-  pagination.value.current_page = 1
-  loadMateriels()
 }
 
 const resetFilters = () => {
@@ -612,182 +426,167 @@ const resetFilters = () => {
   searchQuery.value = ''
   prixMin.value = ''
   prixMax.value = ''
-  sortBy.value = 'nom'
   pagination.value.current_page = 1
   loadMateriels()
 }
 
-// Tri
-const applySort = () => {
-  pagination.value.current_page = 1
-  loadMateriels()
-}
-
-// Recherche
 const searchMateriels = async () => {
-  if (searchQuery.value.length < 2) {
-    if (searchQuery.value.length === 0) {
-      loadMateriels()
-    }
-    return
+  clearTimeout(window._stT)
+  if (!searchQuery.value) { 
+    loadMateriels() 
+    return 
   }
-
-  try {
-    const response = await api.get(`/materiels/search?q=${searchQuery.value}`)
-    
-    let searchResults = []
-    
-    if (response.data && response.data.success && response.data.data) {
-      searchResults = Array.isArray(response.data.data) ? response.data.data : []
-    } else if (Array.isArray(response.data)) {
-      searchResults = response.data
-    } else if (response.data && response.data.data) {
-      searchResults = Array.isArray(response.data.data) ? response.data.data : []
+  if (searchQuery.value.length < 2) return
+  
+  window._stT = setTimeout(async () => {
+    try {
+      const res = await api.get(`/materiels/search?q=${encodeURIComponent(searchQuery.value)}`)
+      const raw = res.data?.data ?? res.data
+      materiels.value = (Array.isArray(raw) ? raw : []).filter(m => m?.id)
+      pagination.value = { 
+        current_page: 1, 
+        last_page: 1, 
+        total: materiels.value.length, 
+        per_page: 12 
+      }
+    } catch (e) { 
+      console.error('❌ Erreur recherche:', e) 
     }
-    
-    materiels.value = searchResults.filter(m => m && m.id)
-    pagination.value = {
-      current_page: 1,
-      last_page: 1,
-      total: materiels.value.length
-    }
-  } catch (error) {
-    console.error('Erreur recherche:', error)
-  }
+  }, 400)
 }
 
-// Pagination
-const nextPage = () => {
-  if (pagination.value.current_page < pagination.value.last_page) {
+// ==================== PAGINATION ====================
+
+const nextPage = () => { 
+  if (pagination.value.current_page < pagination.value.last_page) { 
     pagination.value.current_page++
     loadMateriels(pagination.value.current_page)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+    window.scrollTo(0, 0)
+  } 
 }
 
-const prevPage = () => {
-  if (pagination.value.current_page > 1) {
+const prevPage = () => { 
+  if (pagination.value.current_page > 1) { 
     pagination.value.current_page--
     loadMateriels(pagination.value.current_page)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+    window.scrollTo(0, 0)
+  } 
 }
 
-const goToPage = (page) => {
-  if (page !== pagination.value.current_page) {
-    pagination.value.current_page = page
-    loadMateriels(page)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+const goToPage = (p) => { 
+  if (p !== pagination.value.current_page) { 
+    pagination.value.current_page = p
+    loadMateriels(p)
+    window.scrollTo(0, 0)
+  } 
 }
 
-// Utilitaires
-const getPhotoUrl = (materiel) => {
-  return getMaterielPhotoUrl(materiel)
+// ==================== ACTIONS ====================
+
+const truncateDescription = (d) => {
+  if (!d) return 'Aucune description'
+  return d.length > 80 ? d.slice(0, 80) + '...' : d
 }
 
-const setDefaultImage = (event) => {
-  event.target.src = '/placeholder.jpg'
-}
-
-const truncateDescription = (description) => {
-  if (!description) return 'Aucune description disponible'
-  return description.length > 100 ? description.substring(0, 100) + '...' : description
-}
-
-const formatPrice = (price) => {
-  if (price === undefined || price === null || isNaN(price)) return '0,00 €'
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2
-  }).format(price)
-}
-
-const isNew = (materiel) => {
-  if (!materiel || !materiel.created_at) return false
-  try {
-    const createdDate = new Date(materiel.created_at)
-    const now = new Date()
-    const diffDays = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24))
-    return diffDays < 30
-  } catch (error) {
-    return false
-  }
-}
-
-const getCategoryIcon = (categoryName) => {
-  if (!categoryName) return '📦'
-  const name = categoryName.toLowerCase()
-  if (name.includes('siege')) return '🪑'
-  if (name.includes('table')) return '🪟'
-  if (name.includes('deco')) return '✨'
-  if (name.includes('lumière') || name.includes('lumiere')) return '💡'
-  if (name.includes('son')) return '🔊'
-  return '📦'
-}
-
-const isFavorite = (materielId) => {
-  return favorites.value.has(materielId)
-}
-
-const toggleFavorite = (materiel) => {
-  if (favorites.value.has(materiel.id)) {
-    favorites.value.delete(materiel.id)
-  } else {
-    favorites.value.add(materiel.id)
-  }
-}
-
-// Navigation
 const goToDetail = (id) => {
-  if (!id) return
-  router.push(`/materiels/${id}`)
+  if (id) router.push(`/materiels/${id}`)
 }
 
-// Panier
-const addToCart = (materiel) => {
-  if (!materiel || !materiel.stock_disponible || materiel.stock_disponible === 0) return
+// ==================== AJOUT AU PANIER CORRIGÉ ====================
+
+const getButtonText = (materiel) => {
+  if (materiel.stock_disponible === 0) return 'Indisponible'
+  if (addingToCart.value === materiel.id) return 'Ajout...'
+  return 'Ajouter'
+}
+
+const addToCart = async (materiel) => {
+  // Vérifications préalables
+  if (!materiel?.stock_disponible) {
+    alert('Ce matériel n\'est pas disponible')
+    return
+  }
   
-  const event = new CustomEvent('addToCart', { 
-    detail: { 
-      materiel,
-      quantity: 1 
-    } 
-  })
-  window.dispatchEvent(event)
+  // Vérifier si l'utilisateur est connecté
+  if (!auth.isAuthenticated) {
+    alert('Veuillez vous connecter pour ajouter des articles au panier')
+    router.push('/login')
+    return
+  }
   
-  // Notification visuelle
-  showNotification(`${materiel.nom} ajouté au panier!`, 'success')
-}
-
-// Notifications
-const showNotification = (message, type = 'info') => {
-  const event = new CustomEvent('showNotification', {
-    detail: { message, type }
-  })
-  window.dispatchEvent(event)
-}
-
-// Modals
-const showHelpModal = () => {
-  // À implémenter
-  console.log('Afficher modal d\'aide')
+  // Empêcher les doubles clics
+  if (addingToCart.value === materiel.id) return
+  
+  try {
+    addingToCart.value = materiel.id
+    console.log('🛒 Ajout au panier:', {
+      materiel_id: materiel.id,
+      nom: materiel.nom,
+      quantite: 1
+    })
+    
+    // ✅ CORRECTION : Utiliser POST /api/panier au lieu de /api/panier/ajouter
+    const response = await api.post('/panier', {
+      materiel_id: materiel.id,
+      quantite: 1
+    })
+    
+    console.log('📦 Réponse:', response.data)
+    
+    if (response.data.success) {
+      // Mettre à jour le compteur du panier dans App.vue
+      window.dispatchEvent(new CustomEvent('cartUpdated'))
+      
+      // Feedback utilisateur
+      alert(`✅ ${materiel.nom} ajouté au panier !`)
+      
+      // Animation sur le bouton
+      const btn = document.activeElement
+      btn?.classList.add('added')
+      setTimeout(() => btn?.classList.remove('added'), 500)
+    }
+  } catch (error) {
+    console.error('❌ Erreur ajout panier:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    })
+    
+    // Gestion des erreurs
+    if (error.response?.status === 401) {
+      alert('Votre session a expiré. Veuillez vous reconnecter.')
+      router.push('/login')
+    } else if (error.response?.status === 422) {
+      const msg = error.response.data?.message || 'Données invalides'
+      alert(msg)
+    } else if (error.response?.data?.message) {
+      alert(error.response.data.message)
+    } else if (error.response?.data?.stock_disponible !== undefined) {
+      alert(`Stock insuffisant. Disponible: ${error.response.data.stock_disponible}`)
+    } else {
+      alert('Erreur lors de l\'ajout au panier. Veuillez réessayer.')
+    }
+  } finally {
+    addingToCart.value = null
+  }
 }
 
 const contactSupport = () => {
   router.push('/contact')
 }
 
-// Initialisation
+// ==================== INITIALISATION ====================
+
 onMounted(() => {
+  console.log('🚀 Initialisation Catalogue')
+  console.log('🔐 Auth status:', auth.isAuthenticated)
   loadCategories()
   loadMateriels()
 })
 </script>
 
 <style scoped>
-/* Styles globaux améliorés */
+/* Styles identiques à ceux fournis précédemment */
 .catalogue-container {
   max-width: 1400px;
   margin: 0 auto;
@@ -795,143 +594,42 @@ onMounted(() => {
   min-height: 100vh;
 }
 
-/* Hero Section */
-.hero-section {
-  position: relative;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 20px;
-  padding: 60px 40px;
+.catalogue-header {
+  text-align: center;
   margin-bottom: 40px;
-  overflow: hidden;
+  padding: 30px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 15px;
   color: white;
 }
 
-.hero-content {
-  position: relative;
-  z-index: 2;
-  max-width: 800px;
-  margin: 0 auto;
-  text-align: center;
-}
-
-.hero-title {
-  font-size: 3.5rem;
-  font-weight: 800;
-  margin-bottom: 15px;
-  background: linear-gradient(to right, #ffffff, #e2e8ff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.hero-subtitle {
-  font-size: 1.2rem;
-  opacity: 0.9;
-  margin-bottom: 30px;
-  line-height: 1.6;
-}
-
-.hero-stats {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 30px;
-  margin-top: 40px;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.stat-number {
+.catalogue-header h1 {
   font-size: 2.5rem;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.stat-label {
-  font-size: 0.9rem;
-  opacity: 0.8;
-  margin-top: 5px;
-}
-
-.stat-divider {
-  opacity: 0.5;
-  font-size: 1.5rem;
-}
-
-.hero-decoration {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
-}
-
-.decoration-circle {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.circle-1 {
-  width: 300px;
-  height: 300px;
-  top: -150px;
-  right: -100px;
-}
-
-.circle-2 {
-  width: 200px;
-  height: 200px;
-  bottom: -80px;
-  left: -80px;
-}
-
-.circle-3 {
-  width: 150px;
-  height: 150px;
-  top: 50%;
-  left: 10%;
-}
-
-/* Filtres */
-.filters-card {
-  background: white;
-  border-radius: 20px;
-  padding: 30px;
-  margin-bottom: 30px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.filters-header {
-  margin-bottom: 25px;
-}
-
-.filters-header h3 {
-  font-size: 1.5rem;
+  margin-bottom: 10px;
   font-weight: 700;
-  color: #2d3748;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
 }
 
-.filters-header p {
-  color: #718096;
-  font-size: 0.95rem;
+.catalogue-header p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
-.filters-grid {
+.filters-section {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.filters-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
-  margin-bottom: 25px;
+  margin-bottom: 20px;
+  align-items: end;
 }
 
 .filter-group {
@@ -940,259 +638,113 @@ onMounted(() => {
   gap: 8px;
 }
 
-.filter-label {
+.filter-group label {
   font-weight: 600;
-  color: #4a5568;
+  color: #374151;
   font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.select-wrapper,
-.input-wrapper,
-.search-wrapper {
-  position: relative;
 }
 
 .filter-select,
-.filter-input,
-.search-input {
-  width: 100%;
-  padding: 14px 15px;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
+.filter-input {
+  padding: 12px 15px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
   font-size: 1rem;
-  transition: all 0.3s;
-  background: white;
-  color: #2d3748;
+  transition: border-color 0.3s;
+  width: 100%;
 }
 
 .filter-select:focus,
-.filter-input:focus,
-.search-input:focus {
+.filter-input:focus {
   outline: none;
   border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.filter-select {
-  appearance: none;
-  padding-right: 40px;
-}
-
-.select-arrow {
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #a0aec0;
-  pointer-events: none;
-}
-
-.input-prefix {
-  position: absolute;
-  left: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #a0aec0;
-  font-weight: 600;
-}
-
-.input-wrapper .filter-input {
-  padding-left: 40px;
 }
 
 .search-group {
   grid-column: span 2;
 }
 
-.search-input {
-  padding-right: 50px;
+.search-wrapper {
+  position: relative;
 }
 
-.search-btn {
+.search-input {
+  padding-right: 45px;
+  width: 100%;
+}
+
+.search-icon {
   position: absolute;
-  right: 10px;
+  right: 15px;
   top: 50%;
   transform: translateY(-50%);
-  background: #667eea;
-  color: white;
-  border: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.search-btn:hover {
-  background: #5a6fd8;
-  transform: translateY(-50%) scale(1.05);
-}
-
-.filter-actions {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 15px;
-  margin-top: 10px;
-}
-
-.reset-btn,
-.apply-btn {
-  flex: 1;
-  padding: 16px;
-  border: none;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-
-.reset-btn {
-  background: #f7fafc;
-  color: #4a5568;
-  border: 2px solid #e2e8f0;
-}
-
-.reset-btn:hover {
-  background: #edf2f7;
-  border-color: #cbd5e0;
-}
-
-.apply-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.apply-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-}
-
-/* Filtres rapides */
-.quick-filters {
-  margin-top: 25px;
-  padding-top: 25px;
-  border-top: 1px solid #e2e8f0;
-}
-
-.quick-filters h4 {
-  font-size: 1rem;
-  color: #4a5568;
-  margin-bottom: 15px;
-  font-weight: 600;
-}
-
-.category-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.category-chip {
-  padding: 10px 20px;
-  background: #f7fafc;
-  border: 2px solid #e2e8f0;
-  border-radius: 50px;
-  font-size: 0.9rem;
-  color: #4a5568;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.category-chip:hover {
-  background: #edf2f7;
-  border-color: #cbd5e0;
-  transform: translateY(-2px);
-}
-
-.chip-icon {
+  color: #9ca3af;
   font-size: 1.1rem;
 }
 
-/* Statistiques */
-.stats-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-top: 30px;
+.reset-btn {
+  padding: 12px 24px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
 }
 
-.stat-card {
-  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-  border-radius: 15px;
-  padding: 20px;
+.reset-btn:hover {
+  background: #e5e7eb;
+}
+
+.stats {
+  display: flex;
+  gap: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #f3f4f6;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.stat-item {
   display: flex;
   align-items: center;
-  gap: 15px;
-  border: 1px solid #e2e8f0;
-}
-
-.stat-icon {
-  font-size: 2rem;
-  opacity: 0.8;
-}
-
-.stat-content {
-  flex: 1;
+  gap: 5px;
 }
 
 .stat-number {
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: #2d3748;
-  line-height: 1;
+  font-weight: 700;
+  color: #374151;
 }
 
-.stat-label {
-  font-size: 0.85rem;
-  color: #718096;
-  margin-top: 5px;
+.loading-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
 }
 
-/* Loading */
-.loading-container {
-  text-align: center;
-  padding: 80px 20px;
-}
-
-.loading-spinner {
-  position: relative;
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 20px;
-}
-
-.spinner-ring {
-  position: absolute;
-  width: 100%;
-  height: 100%;
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f4f6;
+  border-top: 4px solid #667eea;
   border-radius: 50%;
-  border: 4px solid transparent;
-  border-top-color: #667eea;
-  animation: spin 1.5s linear infinite;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
 }
 
-.spinner-ring:nth-child(2) {
-  animation-delay: 0.5s;
-  border-top-color: #764ba2;
-}
-
-.spinner-ring:nth-child(3) {
-  animation-delay: 1s;
-  border-top-color: #667eea;
+.spinner-small {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 5px;
 }
 
 @keyframes spin {
@@ -1200,334 +752,171 @@ onMounted(() => {
   100% { transform: rotate(360deg); }
 }
 
-.loading-text {
-  font-size: 1.2rem;
-  color: #4a5568;
-  margin-bottom: 5px;
-  font-weight: 600;
-}
-
-.loading-subtext {
-  color: #a0aec0;
-  font-size: 0.9rem;
-}
-
-/* Résultats */
-.no-results-container {
+.no-results {
   text-align: center;
-  padding: 60px 20px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border-radius: 20px;
-  border: 2px dashed #cbd5e0;
+  padding: 80px 20px;
 }
 
-.no-results-illustration {
-  margin-bottom: 30px;
-}
-
-.illustration {
-  font-size: 5rem;
+.no-results-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
   opacity: 0.5;
-  animation: bounce 2s infinite;
 }
 
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+.no-results h3 {
+  font-size: 1.5rem;
+  color: #374151;
+  margin-bottom: 10px;
 }
 
-.no-results-content {
-  max-width: 500px;
-  margin: 0 auto;
-}
-
-.no-results-title {
-  font-size: 1.8rem;
-  color: #2d3748;
-  margin-bottom: 15px;
-  font-weight: 700;
-}
-
-.no-results-description {
-  color: #718096;
+.no-results p {
+  color: #6b7280;
   margin-bottom: 30px;
-  line-height: 1.6;
-}
-
-.no-results-actions {
-  display: flex;
-  gap: 15px;
-  justify-content: center;
-}
-
-.primary-btn,
-.secondary-btn {
-  padding: 14px 28px;
-  border-radius: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: none;
 }
 
 .primary-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 14px 28px;
+  background: #667eea;
   color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 
 .primary-btn:hover {
+  background: #5a6fd8;
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
-.secondary-btn {
-  background: white;
-  color: #4a5568;
-  border: 2px solid #e2e8f0;
-}
-
-.secondary-btn:hover {
-  background: #f7fafc;
-  border-color: #cbd5e0;
-}
-
-.results-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-}
-
-.results-title {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #2d3748;
-}
-
-.sort-options {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.sort-label {
-  color: #718096;
-  font-size: 0.9rem;
-}
-
-.sort-select {
-  padding: 10px 15px;
-  border: 2px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 0.9rem;
-  color: #4a5568;
-  cursor: pointer;
-  background: white;
-}
-
-/* Grille des matériels */
 .materiels-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 30px;
   margin-bottom: 50px;
 }
 
 .materiel-card {
   background: white;
-  border-radius: 20px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
   cursor: pointer;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid #f3f4f6;
 }
 
 .materiel-card:hover {
-  transform: translateY(-10px) scale(1.02);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  transform: translateY(-8px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
 }
 
 .materiel-image {
   position: relative;
-  height: 220px;
+  height: 200px;
   overflow: hidden;
 }
 
-.product-image {
+.materiel-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.6s ease;
+  transition: transform 0.5s;
 }
 
-.materiel-card:hover .product-image {
-  transform: scale(1.1);
+.materiel-card:hover .materiel-image img {
+  transform: scale(1.05);
 }
 
-/* Badges améliorés */
 .card-badges {
   position: absolute;
   top: 15px;
   left: 15px;
   right: 15px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  justify-content: space-between;
 }
 
-.stock-badge,
-.new-badge,
-.promo-badge {
-  padding: 8px 15px;
-  border-radius: 25px;
-  font-size: 0.8rem;
+.stock-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
   font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 6px;
   color: white;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .stock-badge.in-stock {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(16, 185, 129, 0.7));
+  background: #10b981;
 }
 
 .stock-badge.low-stock {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(245, 158, 11, 0.7));
+  background: #f59e0b;
 }
 
 .stock-badge.out-of-stock {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(239, 68, 68, 0.7));
+  background: #ef4444;
 }
 
 .new-badge {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(139, 92, 246, 0.7));
-}
-
-.promo-badge {
-  background: linear-gradient(135deg, rgba(236, 72, 153, 0.9), rgba(236, 72, 153, 0.7));
-}
-
-.badge-icon {
-  font-size: 0.9rem;
-}
-
-/* Quick Actions */
-.quick-actions {
-  position: absolute;
-  bottom: 15px;
-  right: 15px;
-  display: flex;
-  gap: 8px;
-  opacity: 0;
-  transform: translateY(10px);
-  transition: all 0.3s ease;
-}
-
-.materiel-card:hover .quick-actions {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.quick-cart-btn,
-.quick-fav-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-.quick-cart-btn:hover {
-  background: #667eea;
+  padding: 6px 12px;
+  background: #8b5cf6;
   color: white;
-  transform: scale(1.1);
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.quick-fav-btn:hover {
-  background: #f56565;
-  color: white;
-  transform: scale(1.1);
-}
-
-.quick-fav-btn.favorited {
-  background: #f56565;
-  color: white;
-}
-
-.quick-icon {
-  font-size: 1.2rem;
-}
-
-/* Informations matériel */
 .materiel-info {
-  padding: 25px;
+  padding: 20px;
 }
 
 .materiel-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 15px;
-  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .materiel-title {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 700;
-  color: #2d3748;
+  color: #1f2937;
   margin: 0;
-  line-height: 1.4;
+  line-height: 1.3;
   flex: 1;
 }
 
 .categorie-tag {
-  background: #f7fafc;
-  color: #667eea;
-  padding: 6px 12px;
+  background: #f3f4f6;
+  color: #6b7280;
+  padding: 4px 10px;
   border-radius: 20px;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 5px;
+  margin-left: 10px;
   white-space: nowrap;
 }
 
-.tag-icon {
-  font-size: 0.9rem;
-}
-
 .materiel-description {
-  color: #718096;
+  color: #6b7280;
   line-height: 1.6;
-  margin-bottom: 20px;
-  font-size: 0.95rem;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  margin-bottom: 15px;
+  font-size: 0.9rem;
 }
 
 .materiel-details {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 25px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .price-section {
@@ -1536,58 +925,47 @@ onMounted(() => {
   gap: 5px;
 }
 
-.price-wrapper {
+.prices {
   display: flex;
   align-items: baseline;
   gap: 5px;
 }
 
 .price {
-  font-size: 1.8rem;
-  font-weight: 800;
+  font-size: 1.5rem;
+  font-weight: 700;
   color: #10b981;
-  background: linear-gradient(135deg, #10b981, #34d399);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
 }
 
 .price-period {
-  font-size: 0.9rem;
-  color: #a0aec0;
+  font-size: 0.85rem;
+  color: #9ca3af;
 }
 
-.price-note {
-  font-size: 0.85rem;
-  color: #f59e0b;
-  font-weight: 500;
+.price-ttc {
+  font-size: 0.8rem;
+  color: #6b7280;
 }
 
 .dimensions {
-  font-size: 0.9rem;
-  color: #718096;
+  font-size: 0.85rem;
+  color: #6b7280;
   display: flex;
   align-items: center;
   gap: 5px;
-  background: #f7fafc;
-  padding: 8px 12px;
-  border-radius: 10px;
 }
 
-.dim-icon {
-  opacity: 0.7;
-}
-
-/* Actions */
 .materiel-actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .add-to-cart-btn,
 .details-btn {
   flex: 1;
-  padding: 14px;
-  border-radius: 12px;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
@@ -1596,74 +974,69 @@ onMounted(() => {
   justify-content: center;
   gap: 8px;
   text-decoration: none;
-  font-size: 0.95rem;
-  border: none;
+  font-size: 0.9rem;
 }
 
 .add-to-cart-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #3b82f6;
   color: white;
 }
 
-.add-to-cart-btn:hover:not(.disabled) {
+.add-to-cart-btn:hover:not(.disabled):not(.loading) {
+  background: #2563eb;
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
 }
 
 .add-to-cart-btn.disabled {
-  background: #cbd5e0;
+  background: #9ca3af;
   cursor: not-allowed;
-  opacity: 0.7;
+  transform: none;
+}
+
+.add-to-cart-btn.loading {
+  background: #93c5fd;
+  cursor: wait;
+}
+
+.add-to-cart-btn.added {
+  background: #10b981;
 }
 
 .details-btn {
-  background: #f7fafc;
-  color: #4a5568;
-  border: 2px solid #e2e8f0;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  text-align: center;
 }
 
 .details-btn:hover {
-  background: #edf2f7;
-  border-color: #cbd5e0;
+  background: #e5e7eb;
   transform: translateY(-2px);
-}
-
-.cart-icon,
-.details-icon {
-  font-size: 1.1rem;
-}
-
-/* Pagination */
-.pagination-container {
-  margin-top: 50px;
 }
 
 .pagination {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 20px;
+  gap: 15px;
+  margin-top: 40px;
+  padding: 20px 0;
 }
 
 .pagination-btn {
-  padding: 12px 25px;
-  background: white;
-  color: #4a5568;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
+  padding: 10px 20px;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 130px;
+  min-width: 120px;
 }
 
 .pagination-btn:hover:not(:disabled) {
-  background: #f7fafc;
-  border-color: #cbd5e0;
-  transform: translateY(-2px);
+  background: #e5e7eb;
 }
 
 .pagination-btn:disabled {
@@ -1671,261 +1044,91 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
-.prev-btn {
-  justify-content: flex-start;
-}
-
-.next-btn {
-  justify-content: flex-end;
-}
-
 .page-numbers {
   display: flex;
-  gap: 8px;
+  gap: 5px;
   align-items: center;
 }
 
 .page-btn {
-  width: 45px;
-  height: 45px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f7fafc;
-  color: #4a5568;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .page-btn:hover:not(.active) {
-  background: #edf2f7;
-  border-color: #cbd5e0;
+  background: #e5e7eb;
 }
 
 .page-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #667eea;
   color: white;
-  border-color: #667eea;
 }
 
 .ellipsis {
   padding: 0 10px;
-  color: #a0aec0;
+  color: #9ca3af;
 }
 
-/* CTA Section */
 .cta-section {
+  text-align: center;
+  padding: 60px 20px;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border-radius: 20px;
-  padding: 50px;
-  margin-top: 60px;
-  border: 1px solid #e2e8f0;
+  border-radius: 15px;
+  margin-top: 40px;
 }
 
-.cta-content {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 40px;
-  align-items: center;
-}
-
-.cta-title {
+.cta-section h2 {
   font-size: 2rem;
-  font-weight: 800;
-  color: #2d3748;
+  color: #1f2937;
   margin-bottom: 15px;
 }
 
-.cta-description {
-  color: #718096;
+.cta-section p {
+  color: #6b7280;
   font-size: 1.1rem;
-  line-height: 1.6;
-  margin-bottom: 25px;
-}
-
-.cta-features {
-  display: flex;
-  gap: 25px;
-  margin-top: 20px;
-}
-
-.feature {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #4a5568;
-  font-weight: 500;
-}
-
-.feature-icon {
-  font-size: 1.2rem;
-}
-
-.cta-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  min-width: 200px;
-}
-
-.contact-btn,
-.help-btn {
-  padding: 16px 24px;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  border: none;
+  margin-bottom: 30px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .contact-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.contact-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
-}
-
-.help-btn {
-  background: white;
-  color: #4a5568;
-  border: 2px solid #e2e8f0;
-}
-
-.help-btn:hover {
-  background: #f7fafc;
-  border-color: #cbd5e0;
-  transform: translateY(-2px);
-}
-
-/* Newsletter */
-.newsletter-section {
-  background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
-  border-radius: 20px;
-  padding: 40px;
-  margin-top: 40px;
-  color: white;
-}
-
-.newsletter-content {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 30px;
-  align-items: center;
-}
-
-.newsletter-icon {
-  font-size: 3rem;
-}
-
-.newsletter-text h3 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.newsletter-text p {
-  opacity: 0.8;
-  font-size: 0.95rem;
-}
-
-.newsletter-form {
-  display: flex;
-  gap: 10px;
-}
-
-.newsletter-input {
-  padding: 14px 20px;
-  border: 2px solid #4a5568;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  font-size: 1rem;
-  min-width: 250px;
-}
-
-.newsletter-input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.newsletter-input:focus {
-  outline: none;
-  border-color: #667eea;
-}
-
-.newsletter-btn {
-  padding: 14px 28px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 16px 32px;
+  background: #10b981;
   color: white;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
+  font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.newsletter-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-}
-
-/* Responsive */
-@media (max-width: 1200px) {
-  .materiels-grid {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  }
-}
-
-@media (max-width: 992px) {
-  .hero-title {
-    font-size: 2.8rem;
-  }
-  
-  .cta-content {
-    grid-template-columns: 1fr;
-    gap: 30px;
-  }
-  
-  .newsletter-content {
-    grid-template-columns: 1fr;
-    text-align: center;
-    gap: 20px;
-  }
-  
-  .newsletter-form {
-    justify-content: center;
-  }
+.contact-btn:hover {
+  background: #0da271;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
 }
 
 @media (max-width: 768px) {
-  .catalogue-container {
-    padding: 15px;
+  .catalogue-header h1 {
+    font-size: 2rem;
   }
   
-  .hero-section {
-    padding: 40px 20px;
-  }
-  
-  .hero-title {
-    font-size: 2.2rem;
-  }
-  
-  .hero-stats {
-    flex-direction: column;
-    gap: 20px;
-  }
-  
-  .filters-grid {
+  .filters-row {
     grid-template-columns: 1fr;
   }
   
@@ -1934,13 +1137,13 @@ onMounted(() => {
   }
   
   .materiels-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 20px;
   }
   
   .pagination {
     flex-direction: column;
-    gap: 15px;
+    gap: 10px;
   }
   
   .page-numbers {
@@ -1948,37 +1151,7 @@ onMounted(() => {
   }
   
   .pagination-btn {
-    min-width: 100%;
-  }
-  
-  .no-results-actions {
-    flex-direction: column;
-  }
-}
-
-@media (max-width: 480px) {
-  .hero-title {
-    font-size: 1.8rem;
-  }
-  
-  .filters-card {
-    padding: 20px;
-  }
-  
-  .cta-section {
-    padding: 30px 20px;
-  }
-  
-  .newsletter-section {
-    padding: 30px 20px;
-  }
-  
-  .newsletter-form {
-    flex-direction: column;
-  }
-  
-  .newsletter-input {
-    min-width: 100%;
+    min-width: 100px;
   }
 }
 </style>

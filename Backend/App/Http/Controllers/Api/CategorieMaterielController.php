@@ -132,10 +132,13 @@ class CategorieMaterielController extends Controller
     /**
      * Récupère les matériels d'une catégorie avec pagination et filtres
      */
+  
+    /**
+     * Récupère les matériels d'une catégorie avec pagination et filtres
+     */
     public function materiels(Request $request, $id)
     {
         try {
-            // Vérifier que la catégorie existe
             $categorie = CategorieMateriel::find($id);
             if (!$categorie) {
                 return response()->json([
@@ -147,79 +150,67 @@ class CategorieMaterielController extends Controller
             $query = $categorie->materiels()->with(['categorie', 'photos'])
                 ->where('stock_disponible', '>', 0);
 
-            // Filtrage par type (premier mot du nom)
-            if ($request->has('type') && $request->type) {
+            if ($request->filled('type')) {
                 $query->where('nom', 'like', $request->type . '%');
             }
 
-            // Filtrage par prix
-            if ($request->has('prix_min') && $request->prix_min) {
-                $query->where('prix_journalier', '>=', $request->prix_min);
+            // ✅ Corrigé : prix_journalier_ht (était prix_journalier)
+            if ($request->filled('prix_min')) {
+                $query->where('prix_journalier_ht', '>=', floatval($request->prix_min));
             }
-            
-            if ($request->has('prix_max') && $request->prix_max) {
-                $query->where('prix_journalier', '<=', $request->prix_max);
+            if ($request->filled('prix_max')) {
+                $query->where('prix_journalier_ht', '<=', floatval($request->prix_max));
             }
 
-            // Recherche par nom
-            if ($request->has('search') && $request->search) {
-                $query->where('nom', 'like', '%' . $request->search . '%')
+            if ($request->filled('search')) {
+                $query->where(function($q) use ($request) {
+                    $q->where('nom', 'like', '%' . $request->search . '%')
                       ->orWhere('description', 'like', '%' . $request->search . '%');
+                });
             }
 
-            // Tri
-            $sort = $request->get('sort', 'nom');
+            $sort  = $request->get('sort', 'nom');
             $order = $request->get('order', 'asc');
-            
-            $allowedSorts = ['nom', 'prix_journalier', 'created_at', 'stock_disponible'];
-            if (in_array($sort, $allowedSorts)) {
-                $query->orderBy($sort, $order);
-            } else {
-                $query->orderBy('nom', 'asc');
-            }
 
-            // Pagination
-            $perPage = $request->get('per_page', 12);
+            // ✅ Corrigé : prix_journalier_ht dans les tris autorisés
+            $allowedSorts = ['nom', 'prix_journalier_ht', 'created_at', 'stock_disponible'];
+            $query->orderBy(in_array($sort, $allowedSorts) ? $sort : 'nom', $order);
+
+            $perPage  = $request->get('per_page', 12);
             $materiels = $query->paginate($perPage);
 
-            // Ajouter les types disponibles pour les filtres
             $types = $categorie->materiels()
                 ->where('stock_disponible', '>', 0)
                 ->pluck('nom')
-                ->map(function($nom) {
-                    return explode(' ', $nom)[0]; // Premier mot
-                })
-                ->unique()
-                ->values();
+                ->map(fn($nom) => explode(' ', $nom)[0])
+                ->unique()->values();
 
             return response()->json([
-                'success' => true,
-                'categorie' => [
-                    'id' => $categorie->id,
-                    'nom' => $categorie->nom,
-                    'description' => $categorie->description
+                'success'    => true,
+                'categorie'  => ['id' => $categorie->id, 'nom' => $categorie->nom, 'description' => $categorie->description],
+                'filters'    => [
+                    'types'   => $types,
+                    // ✅ Corrigé : min/max sur prix_journalier_ht
+                    'prix_min' => $materiels->isEmpty() ? 0 : $materiels->min('prix_journalier_ht'),
+                    'prix_max' => $materiels->isEmpty() ? 0 : $materiels->max('prix_journalier_ht'),
                 ],
-                'filters' => [
-                    'types' => $types,
-                    'prix_min' => $materiels->isEmpty() ? 0 : $materiels->min('prix_journalier'),
-                    'prix_max' => $materiels->isEmpty() ? 0 : $materiels->max('prix_journalier')
-                ],
-                'data' => $materiels->items(),
+                'data'       => $materiels->items(),
                 'pagination' => [
                     'current_page' => $materiels->currentPage(),
-                    'last_page' => $materiels->lastPage(),
-                    'per_page' => $materiels->perPage(),
-                    'total' => $materiels->total()
-                ]
+                    'last_page'    => $materiels->lastPage(),
+                    'per_page'     => $materiels->perPage(),
+                    'total'        => $materiels->total(),
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors du chargement des matériels de la catégorie',
-                'error' => $e->getMessage()
+                'error'   => $e->getMessage()
             ], 500);
         }
     }
+
 
     /**
      * Crée une nouvelle catégorie (Admin)
@@ -424,4 +415,5 @@ class CategorieMaterielController extends Controller
             ], 500);
         }
     }
+    
 }

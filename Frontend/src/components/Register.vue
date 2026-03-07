@@ -220,19 +220,60 @@
           </div>
           
           <form @submit.prevent="handleSubmit" class="address-form">
-            <div class="form-group">
-              <label class="form-label">Adresse complète *</label>
-              <textarea
-                v-model="form.adresse"
-                required
-                placeholder="Ex: Rue de la Paix 87, 1000 Bruxelles, Belgique"
-                class="form-input"
-                rows="3"
-                :class="{ 'error': errors.adresse }"
-              ></textarea>
-              <p v-if="errors.adresse" class="error-message">{{ errors.adresse[0] }}</p>
-              <p class="help-text">Entrez votre adresse complète (rue, numéro, code postal, ville, pays)</p>
-            </div>
+          <div class="form-group">
+  <label class="form-label">Nom de la rue *</label>
+  <input
+    v-model="form.nom_rue"
+    type="text"
+    required
+    placeholder="Ex: Rue de la Paix"
+    class="form-input"
+    :class="{ 'error': errors.nom_rue }"
+  />
+  <p v-if="errors.nom_rue" class="error-message">{{ errors.nom_rue[0] }}</p>
+</div>
+
+<div class="form-group">
+  <label class="form-label">Numéro *</label>
+  <input
+    v-model="form.numero_rue"
+    type="text"
+    required
+    placeholder="Ex: 87"
+    class="form-input"
+    :class="{ 'error': errors.numero_rue }"
+  />
+  <p v-if="errors.numero_rue" class="error-message">{{ errors.numero_rue[0] }}</p>
+</div>
+
+<div class="form-row">
+  <div class="form-group">
+    <label class="form-label">Nom de la commune *</label>
+    <input
+      v-model="form.nom_commune"
+      type="text"
+      required
+      placeholder="Ex: Bruxelles"
+      class="form-input"
+      :class="{ 'error': errors.nom_commune }"
+    />
+    <p v-if="errors.nom_commune" class="error-message">{{ errors.nom_commune[0] }}</p>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label">Code postal *</label>
+    <input
+      v-model="form.code_postal"
+      type="text"
+      required
+      placeholder="Ex: 1000"
+      class="form-input"
+      :class="{ 'error': errors.code_postal }"
+    />
+    <p v-if="errors.code_postal" class="error-message">{{ errors.code_postal[0] }}</p>
+  </div>
+</div>
+
             
             <div class="submit-section">
               <div class="terms-section">
@@ -331,16 +372,16 @@
                   </div>
                   
                   <div class="form-group">
-                    <label class="form-label">Numéro de commune *</label>
+                    <label class="form-label">Code postal *</label>
                     <input
-                      v-model="form.numero_commune_siege"
+                      v-model="form.code_postal_siege"
                       type="text"
                       required
                       placeholder="Ex: 1000"
                       class="form-input"
-                      :class="{ 'error': errors.numero_commune_siege }"
+                      :class="{ 'error': errors.code_postal_siege }"
                     />
-                    <p v-if="errors.numero_commune_siege" class="error-message">{{ errors.numero_commune_siege[0] }}</p>
+                    <p v-if="errors.code_postal_siege" class="error-message">{{ errors.code_postal_siege[0] }}</p>
                   </div>
                 </div>
               </div>
@@ -406,16 +447,16 @@
                     </div>
                     
                     <div class="form-group">
-                      <label class="form-label">Numéro de commune *</label>
+                      <label class="form-label">Code postal *</label>
                       <input
-                        v-model="form.numero_commune_livraison"
+                        v-model="form.code_postal_livraison"
                         type="text"
                         :required="showDeliveryAddress"
                         placeholder="Ex: 1000"
                         class="form-input"
-                        :class="{ 'error': errors.numero_commune_livraison }"
+                        :class="{ 'error': errors.code_postal_livraison }"
                       />
-                      <p v-if="errors.numero_commune_livraison" class="error-message">{{ errors.numero_commune_livraison[0] }}</p>
+                      <p v-if="errors.code_postal_livraison" class="error-message">{{ errors.code_postal_livraison[0] }}</p>
                     </div>
                   </div>
                 </div>
@@ -612,7 +653,11 @@ const form = reactive({
   // PARTICULIER
   nom: '',
   prenom: '',
-  adresse: '', // Champ unique pour l'adresse complète
+ nom_rue: '',
+numero_rue: '',
+nom_commune: '',
+code_postal: '',
+
   
   // PROFESSIONNEL
   nom_societe: '',
@@ -622,14 +667,14 @@ const form = reactive({
   numero_rue_siege: '',
   // Commune siège (champs textuels)
   nom_commune_siege: '',
-  numero_commune_siege: '',
+  code_postal_siege: '',
   
   // Adresse livraison
   nom_rue_livraison: '',
   numero_rue_livraison: '',
   // Commune livraison (champs textuels)
   nom_commune_livraison: '',
-  numero_commune_livraison: '',
+  code_postal_livraison: '',
   
   // Contact
   contact_nom: '',
@@ -814,7 +859,10 @@ const handleSubmit = async (e) => {
       // PARTICULIER
       dataToSend.nom = form.nom
       dataToSend.prenom = form.prenom
-      dataToSend.adresse = form.adresse // Adresse complète en texte
+     dataToSend.nom_rue = form.nom_rue
+        dataToSend.numero_rue= form.numero_rue
+        dataToSend.nom_commune = form.nom_commune
+        dataToSend.code_postal = form.code_postal
     } else {
       // PROFESSIONNEL
       dataToSend.nom_societe = form.nom_societe
@@ -823,7 +871,7 @@ const handleSubmit = async (e) => {
       dataToSend.nom_rue_siege = form.nom_rue_siege
       dataToSend.numero_rue_siege = form.numero_rue_siege
       dataToSend.nom_commune_siege = form.nom_commune_siege
-      dataToSend.numero_commune_siege = form.numero_commune_siege
+      dataToSend.code_postal_siege = form.code_postal_siege
       
       // Adresse livraison si différente
       if (showDeliveryAddress.value && form.nom_rue_livraison && form.numero_rue_livraison) {
@@ -831,7 +879,7 @@ const handleSubmit = async (e) => {
         dataToSend.nom_rue_livraison = form.nom_rue_livraison
         dataToSend.numero_rue_livraison = form.numero_rue_livraison
         dataToSend.nom_commune_livraison = form.nom_commune_livraison
-        dataToSend.numero_commune_livraison = form.numero_commune_livraison
+        dataToSend.code_postal_livraison = form.code_postal_livraison
       }
       
       // Contact
@@ -865,7 +913,7 @@ const handleSubmit = async (e) => {
       
       // Retour à l'étape concernée
       const errorKeys = Object.keys(error.response.data.errors)
-      if (errorKeys.some(key => ['email', 'password', 'nom', 'prenom', 'nom_societe', 'langue_id', 'adresse', 'nom_commune_siege', 'numero_commune_siege'].includes(key))) {
+      if (errorKeys.some(key => ['email', 'password', 'nom', 'prenom', 'nom_societe', 'langue_id', 'adresse', 'nom_commune_siege', 'code_postal_siege'].includes(key))) {
         step.value = 2
       }
     } else {

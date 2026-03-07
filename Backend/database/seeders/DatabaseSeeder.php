@@ -49,15 +49,15 @@ class DatabaseSeeder extends Seeder
         // Communes (quelques exemples)
         echo "🏙️  Création des communes...\n";
         DB::table('communes')->insert([
-            ['nom_commune' => 'Bruxelles', 'numero_commune' => 1000, 'created_at' => now()],
-            ['nom_commune' => 'Ixelles', 'numero_commune' => 1050, 'created_at' => now()],
-            ['nom_commune' => 'Etterbeek', 'numero_commune' => 1040, 'created_at' => now()],
-            ['nom_commune' => 'Schaerbeek', 'numero_commune' => 1030, 'created_at' => now()],
-            ['nom_commune' => 'Anderlecht', 'numero_commune' => 1070, 'created_at' => now()],
-            ['nom_commune' => 'Molenbeek', 'numero_commune' => 1080, 'created_at' => now()],
-            ['nom_commune' => 'Paris', 'numero_commune' => 75000, 'created_at' => now()],
-            ['nom_commune' => 'Lyon', 'numero_commune' => 69000, 'created_at' => now()],
-            ['nom_commune' => 'Marseille', 'numero_commune' => 13000, 'created_at' => now()],
+            ['nom_commune' => 'Bruxelles', 'code_postal' => 1000, 'created_at' => now()],
+            ['nom_commune' => 'Ixelles', 'code_postal' => 1050, 'created_at' => now()],
+            ['nom_commune' => 'Etterbeek', 'code_postal' => 1040, 'created_at' => now()],
+            ['nom_commune' => 'Schaerbeek', 'code_postal' => 1030, 'created_at' => now()],
+            ['nom_commune' => 'Anderlecht', 'code_postal' => 1070, 'created_at' => now()],
+            ['nom_commune' => 'Molenbeek', 'code_postal' => 1080, 'created_at' => now()],
+            ['nom_commune' => 'Paris', 'code_postal' => 75000, 'created_at' => now()],
+            ['nom_commune' => 'Lyon', 'code_postal' => 69000, 'created_at' => now()],
+            ['nom_commune' => 'Marseille', 'code_postal' => 13000, 'created_at' => now()],
         ]);
         echo "   ✅ 9 communes créées\n\n";
 

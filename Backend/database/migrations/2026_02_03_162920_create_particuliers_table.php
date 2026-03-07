@@ -23,7 +23,11 @@ return new class extends Migration
             // 👤 infos personnelles
             $table->string('nom');
             $table->string('prenom');
-            $table->string('adresse');
+           $table->foreignId('adresse_livraison_id')
+                  ->nullable()
+                  ->constrained('adresses')
+                  ->nullOnDelete();
+            
 
             $table->timestamps();
         });

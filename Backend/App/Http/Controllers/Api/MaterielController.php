@@ -17,114 +17,90 @@ class MaterielController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Materiel::with(['categorie', 'photos'])
-                ->where('stock_disponible', '>', 0);
+            // On charge la catégorie et les photos
+            $query = Materiel::with(['categorie', 'photos', 'photoPrincipale']);
+
+            // Par défaut, on cache ce qui est en rupture, sauf si demandé explicitement
+            if (!$request->has('include_out_of_stock')) {
+                $query->where('stock_disponible', '>', 0);
+            }
 
             // Filtrage par catégorie
-            if ($request->has('categorie_id') && $request->categorie_id) {
+            if ($request->filled('categorie_id')) {
                 $query->where('categorie_id', $request->categorie_id);
-                
-                // Ajouter les infos de la catégorie
-                $categorie = CategorieMateriel::find($request->categorie_id);
             }
 
-            // Filtrage par prix
-            if ($request->has('prix_min') && $request->prix_min !== null) {
-                $query->where('prix_journalier', '>=', floatval($request->prix_min));
+            // Filtrage par prix HT
+            if ($request->filled('prix_min')) {
+                $query->where('prix_journalier_ht', '>=', floatval($request->prix_min));
             }
-            
-            if ($request->has('prix_max') && $request->prix_max !== null) {
-                $query->where('prix_journalier', '<=', floatval($request->prix_max));
+            if ($request->filled('prix_max')) {
+                $query->where('prix_journalier_ht', '<=', floatval($request->prix_max));
             }
 
-            // Recherche par nom ou description
-            if ($request->has('search') && $request->search) {
+            // Recherche textuelle
+            if ($request->filled('search')) {
                 $searchTerm = $request->search;
                 $query->where(function($q) use ($searchTerm) {
                     $q->where('nom', 'like', '%' . $searchTerm . '%')
-                      ->orWhere('description', 'like', '%' . $searchTerm . '%')
-                      ->orWhereHas('categorie', function($q) use ($searchTerm) {
-                          $q->where('nom', 'like', '%' . $searchTerm . '%');
-                      });
+                      ->orWhere('description', 'like', '%' . $searchTerm . '%');
                 });
             }
 
             // Tri
             $sort = $request->get('sort', 'nom');
             $order = $request->get('order', 'asc');
+            $allowedSorts = ['nom', 'prix_journalier_ht', 'created_at', 'stock_disponible'];
             
-            $allowedSorts = ['nom', 'prix_journalier', 'created_at', 'stock_disponible'];
-            if (in_array($sort, $allowedSorts)) {
-                $query->orderBy($sort, $order);
-            } else {
-                $query->orderBy('nom', 'asc');
-            }
+            $query->orderBy(in_array($sort, $allowedSorts) ? $sort : 'nom', $order);
 
             // Pagination
             $perPage = $request->get('per_page', 12);
             $materiels = $query->paginate($perPage);
 
-            // Formater les URLs des images
+            // Transformation de la collection
             $materiels->getCollection()->transform(function($materiel) {
-                // S'assurer que les photos ont des URLs complètes
-                if ($materiel->photos && $materiel->photos->isNotEmpty()) {
-                    $materiel->photos->transform(function($photo) {
-                        $photo->url_photo = $this->formatImageUrl($photo->url_photo);
-                        return $photo;
-                    });
-                } else {
-                    // Ajouter une photo par défaut si aucune photo n'existe
-                    $materiel->photos = collect([[
-                        'id' => 0,
-                        'materiel_id' => $materiel->id,
-                        'url_photo' => $this->getDefaultImage($materiel->categorie_id),
-                        'is_default' => true
-                    ]]);
-                }
-                
-                // Formater le prix
-                $materiel->prix_formatted = number_format($materiel->prix_journalier, 2, ',', ' ') . ' €';
-                
-                // Ajouter un indicateur si c'est nouveau (moins de 30 jours)
+                // On utilise l'accessor du modèle pour marquer les nouveautés
                 $materiel->is_new = $materiel->created_at->diffInDays(now()) < 30;
                 
+                // Ajouter le prix TTC
+                $materiel->prix_ttc = $materiel->prix_ttc;
+                $materiel->prix_formatted = $materiel->prix_formatted;
+                
+                // Formater les URLs des photos
+                if ($materiel->photos) {
+                    foreach ($materiel->photos as $photo) {
+                        $photo->url_photo = $this->formatImageUrl($photo->url_photo);
+                    }
+                }
+                
+                // On s'assure que l'URL de la photo principale est formatée
+                if ($materiel->photoPrincipale) {
+                    $materiel->main_photo = $this->formatImageUrl($materiel->photoPrincipale->url_photo);
+                } else {
+                    $materiel->main_photo = $this->getDefaultImage($materiel->categorie_id);
+                }
                 return $materiel;
             });
 
-            $response = [
+            return response()->json([
                 'success' => true,
                 'data' => $materiels->items(),
                 'pagination' => [
                     'current_page' => $materiels->currentPage(),
                     'last_page' => $materiels->lastPage(),
-                    'per_page' => $materiels->perPage(),
                     'total' => $materiels->total(),
-                    'from' => $materiels->firstItem(),
-                    'to' => $materiels->lastItem()
+                ],
+                'filters' => [
+                    'categories' => CategorieMateriel::all(['id', 'nom']),
+                    'prix_range' => [
+                        'min' => Materiel::min('prix_journalier_ht') ?? 0,
+                        'max' => Materiel::max('prix_journalier_ht') ?? 100
+                    ]
                 ]
-            ];
-
-            // Ajouter les infos de la catégorie si filtré par catégorie
-            if (isset($categorie) && $categorie) {
-                $response['categorie'] = $categorie;
-            }
-
-            // Ajouter les filtres disponibles
-            $response['filters'] = [
-                'categories' => CategorieMateriel::all(['id', 'nom']),
-                'prix_range' => [
-                    'min' => Materiel::where('stock_disponible', '>', 0)->min('prix_journalier') ?? 0,
-                    'max' => Materiel::where('stock_disponible', '>', 0)->max('prix_journalier') ?? 100
-                ]
-            ];
-
-            return response()->json($response);
+            ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors du chargement des matériels',
-                'error' => $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -137,61 +113,42 @@ class MaterielController extends Controller
             $materiel = Materiel::with(['categorie', 'photos'])->find($id);
 
             if (!$materiel) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Matériel non trouvé'
-                ], 404);
+                return response()->json(['success' => false, 'message' => 'Matériel non trouvé'], 404);
             }
 
-            // Formater les URLs des photos
-            if ($materiel->photos && $materiel->photos->isNotEmpty()) {
-                $materiel->photos->transform(function($photo) {
-                    $photo->url_photo = $this->formatImageUrl($photo->url_photo);
-                    return $photo;
-                });
-            } else {
-                // Photo par défaut
-                $materiel->photos = collect([[
-                    'id' => 0,
-                    'materiel_id' => $materiel->id,
-                    'url_photo' => $this->getDefaultImage($materiel->categorie_id),
-                    'is_default' => true
-                ]]);
-            }
-
-            // Formater les données
-            $materiel->prix_formatted = number_format($materiel->prix_journalier, 2, ',', ' ') . ' €';
-            $materiel->is_new = $materiel->created_at->diffInDays(now()) < 30;
-            
-            // Calculer la disponibilité
-            $materiel->disponibilite = [
+            // Ajout d'infos de disponibilité pour le Front
+            $materiel->status_stock = [
                 'disponible' => $materiel->stock_disponible > 0,
-                'niveau' => $materiel->stock_disponible < 10 ? 'low' : ($materiel->stock_disponible < 20 ? 'medium' : 'high'),
-                'message' => $materiel->stock_disponible > 0 
-                    ? ($materiel->stock_disponible < 10 
-                        ? 'Stock faible' 
-                        : 'En stock') 
-                    : 'Rupture de stock'
+                'niveau' => $materiel->stock_disponible < 5 ? 'critique' : 'ok',
+                'quantite' => $materiel->stock_disponible
             ];
 
-            // Matériels similaires (même catégorie)
-            $similaires = Materiel::with(['categorie', 'photos'])
+            // Ajouter les prix formatés
+            $materiel->prix_ttc = $materiel->prix_ttc;
+            $materiel->prix_formatted = $materiel->prix_formatted;
+
+            // Formater les URLs des photos
+            foreach ($materiel->photos as $photo) {
+                $photo->url_photo = $this->formatImageUrl($photo->url_photo);
+            }
+
+            // Matériels similaires
+            $similaires = Materiel::with('photoPrincipale')
                 ->where('categorie_id', $materiel->categorie_id)
                 ->where('id', '!=', $materiel->id)
                 ->where('stock_disponible', '>', 0)
-                ->limit(6)
-                ->get();
-
-            // Formater les similaires
-            $similaires->transform(function($similar) {
-                if ($similar->photos && $similar->photos->isNotEmpty()) {
-                    $similar->main_photo = $this->formatImageUrl($similar->photos->first()->url_photo);
-                } else {
-                    $similar->main_photo = $this->getDefaultImage($similar->categorie_id);
-                }
-                $similar->prix_formatted = number_format($similar->prix_journalier, 2, ',', ' ') . ' €';
-                return $similar;
-            });
+                ->limit(4)
+                ->get()
+                ->map(function($item) {
+                    $item->prix_ttc = $item->prix_ttc;
+                    $item->prix_formatted = $item->prix_formatted;
+                    if ($item->photoPrincipale) {
+                        $item->main_photo = $this->formatImageUrl($item->photoPrincipale->url_photo);
+                    } else {
+                        $item->main_photo = $this->getDefaultImage($item->categorie_id);
+                    }
+                    return $item;
+                });
 
             return response()->json([
                 'success' => true,
@@ -199,11 +156,7 @@ class MaterielController extends Controller
                 'similaires' => $similaires
             ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors du chargement du matériel',
-                'error' => $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -217,7 +170,8 @@ class MaterielController extends Controller
                 'categorie_id' => 'required|exists:categories_materiel,id',
                 'nom' => 'required|string|max:150',
                 'description' => 'nullable|string',
-                'prix_journalier' => 'required|numeric|min:0',
+                'prix_journalier_ht' => 'required|numeric|min:0',
+                'taux_tva' => 'required|numeric|min:0|max:100',
                 'dimensions' => 'nullable|string|max:100',
                 'stock_total' => 'required|integer|min:0',
                 'stock_disponible' => 'required|integer|min:0|lte:stock_total'
@@ -233,7 +187,16 @@ class MaterielController extends Controller
 
             DB::beginTransaction();
 
-            $materiel = Materiel::create($request->all());
+            $materiel = Materiel::create([
+                'categorie_id' => $request->categorie_id,
+                'nom' => $request->nom,
+                'description' => $request->description,
+                'prix_journalier_ht' => $request->prix_journalier_ht,
+                'taux_tva' => $request->taux_tva ?? 21.00,
+                'dimensions' => $request->dimensions,
+                'stock_total' => $request->stock_total,
+                'stock_disponible' => $request->stock_disponible
+            ]);
 
             DB::commit();
 
@@ -271,7 +234,8 @@ class MaterielController extends Controller
                 'categorie_id' => 'required|exists:categories_materiel,id',
                 'nom' => 'required|string|max:150',
                 'description' => 'nullable|string',
-                'prix_journalier' => 'required|numeric|min:0',
+                'prix_journalier_ht' => 'required|numeric|min:0',
+                'taux_tva' => 'required|numeric|min:0|max:100',
                 'dimensions' => 'nullable|string|max:100',
                 'stock_total' => 'required|integer|min:0',
                 'stock_disponible' => 'required|integer|min:0|lte:stock_total'
@@ -348,7 +312,7 @@ class MaterielController extends Controller
     public function populaires()
     {
         try {
-            $materiels = Materiel::with(['categorie', 'photos'])
+            $materiels = Materiel::with(['categorie', 'photos', 'photoPrincipale'])
                 ->where('stock_disponible', '>', 0)
                 ->inRandomOrder()
                 ->limit(8)
@@ -356,12 +320,22 @@ class MaterielController extends Controller
 
             // Formater les photos
             $materiels->transform(function($materiel) {
-                if ($materiel->photos && $materiel->photos->isNotEmpty()) {
-                    $materiel->main_photo = $this->formatImageUrl($materiel->photos->first()->url_photo);
+                $materiel->is_new = $materiel->created_at->diffInDays(now()) < 30;
+                $materiel->prix_ttc = $materiel->prix_ttc;
+                $materiel->prix_formatted = $materiel->prix_formatted;
+                
+                // Formater les URLs des photos
+                if ($materiel->photos) {
+                    foreach ($materiel->photos as $photo) {
+                        $photo->url_photo = $this->formatImageUrl($photo->url_photo);
+                    }
+                }
+                
+                if ($materiel->photoPrincipale) {
+                    $materiel->main_photo = $this->formatImageUrl($materiel->photoPrincipale->url_photo);
                 } else {
                     $materiel->main_photo = $this->getDefaultImage($materiel->categorie_id);
                 }
-                $materiel->prix_formatted = number_format($materiel->prix_journalier, 2, ',', ' ') . ' €';
                 return $materiel;
             });
 
@@ -393,7 +367,7 @@ class MaterielController extends Controller
                 ], 400);
             }
 
-            $materiels = Materiel::with(['categorie', 'photos'])
+            $materiels = Materiel::with(['categorie', 'photos', 'photoPrincipale'])
                 ->where(function($q) use ($query) {
                     $q->where('nom', 'like', '%' . $query . '%')
                       ->orWhere('description', 'like', '%' . $query . '%')
@@ -407,12 +381,21 @@ class MaterielController extends Controller
 
             // Formater les photos
             $materiels->transform(function($materiel) {
-                if ($materiel->photos && $materiel->photos->isNotEmpty()) {
-                    $materiel->main_photo = $this->formatImageUrl($materiel->photos->first()->url_photo);
+                $materiel->prix_ttc = $materiel->prix_ttc;
+                $materiel->prix_formatted = $materiel->prix_formatted;
+                
+                // Formater les URLs des photos
+                if ($materiel->photos) {
+                    foreach ($materiel->photos as $photo) {
+                        $photo->url_photo = $this->formatImageUrl($photo->url_photo);
+                    }
+                }
+                
+                if ($materiel->photoPrincipale) {
+                    $materiel->main_photo = $this->formatImageUrl($materiel->photoPrincipale->url_photo);
                 } else {
                     $materiel->main_photo = $this->getDefaultImage($materiel->categorie_id);
                 }
-                $materiel->prix_formatted = number_format($materiel->prix_journalier, 2, ',', ' ') . ' €';
                 return $materiel;
             });
 
@@ -519,36 +502,68 @@ class MaterielController extends Controller
     }
 
     /**
+     * Matériels récemment ajoutés
+     */
+    public function recents()
+    {
+        try {
+            $materiels = Materiel::with(['categorie', 'photos', 'photoPrincipale'])
+                ->where('stock_disponible', '>', 0)
+                ->orderBy('created_at', 'desc')
+                ->limit(6)
+                ->get();
+
+            // Marquer comme nouveaux
+            $materiels->transform(function($materiel) {
+                $materiel->is_new = $materiel->created_at->diffInDays(now()) < 30;
+                $materiel->prix_ttc = $materiel->prix_ttc;
+                $materiel->prix_formatted = $materiel->prix_formatted;
+                
+                // Formater les URLs des photos
+                if ($materiel->photos) {
+                    foreach ($materiel->photos as $photo) {
+                        $photo->url_photo = $this->formatImageUrl($photo->url_photo);
+                    }
+                }
+                
+                if ($materiel->photoPrincipale) {
+                    $materiel->main_photo = $this->formatImageUrl($materiel->photoPrincipale->url_photo);
+                } else {
+                    $materiel->main_photo = $this->getDefaultImage($materiel->categorie_id);
+                }
+                return $materiel;
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $materiels
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du chargement des matériels récents',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Formatte une URL d'image
      */
-    private function formatImageUrl($url)
-    {
-        if (!$url) {
-            return '/placeholder.jpg';
-        }
+    // Dans PanierController.php
+private function formatImageUrl(?string $url): ?string
+{
+    if (!$url) return null;
 
-        // Si c'est déjà une URL complète
-        if (str_starts_with($url, 'http') || str_starts_with($url, '//')) {
-            return $url;
-        }
+    // Si c'est déjà une URL complète
+    if (str_starts_with($url, 'http')) return $url;
 
-        // Ajouter le slash si nécessaire
-        if (!str_starts_with($url, '/')) {
-            $url = '/' . $url;
-        }
+    // Nettoyer le slash au début pour éviter les doubles slashes
+    $clean = ltrim($url, '/');
 
-        // Vérifier si c'est une URL relative à votre storage
-        if (str_starts_with($url, '/storage/')) {
-            return asset($url);
-        }
-
-        // Pour les images dans le dossier public/materiels
-        if (str_starts_with($url, '/materiels/')) {
-            return asset('materiels/' . basename($url));
-        }
-
-        return asset($url);
-    }
+    // On utilise simplement url() qui pointe vers le dossier 'public'
+    return url($clean); 
+}
 
     /**
      * Retourne une image par défaut selon la catégorie
@@ -564,43 +579,6 @@ class MaterielController extends Controller
                 return '/images/materiels/default-deco.jpg';
             default:
                 return '/placeholder.jpg';
-        }
-    }
-
-    /**
-     * Matériels récemment ajoutés
-     */
-    public function recents()
-    {
-        try {
-            $materiels = Materiel::with(['categorie', 'photos'])
-                ->where('stock_disponible', '>', 0)
-                ->orderBy('created_at', 'desc')
-                ->limit(6)
-                ->get();
-
-            // Marquer comme nouveaux
-            $materiels->transform(function($materiel) {
-                $materiel->is_new = $materiel->created_at->diffInDays(now()) < 30;
-                if ($materiel->photos && $materiel->photos->isNotEmpty()) {
-                    $materiel->main_photo = $this->formatImageUrl($materiel->photos->first()->url_photo);
-                } else {
-                    $materiel->main_photo = $this->getDefaultImage($materiel->categorie_id);
-                }
-                $materiel->prix_formatted = number_format($materiel->prix_journalier, 2, ',', ' ') . ' €';
-                return $materiel;
-            });
-
-            return response()->json([
-                'success' => true,
-                'data' => $materiels
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors du chargement des matériels récents',
-                'error' => $e->getMessage()
-            ], 500);
         }
     }
 }

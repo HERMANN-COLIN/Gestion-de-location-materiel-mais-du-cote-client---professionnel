@@ -11,10 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('reductionclients', function (Blueprint $table) {
+        Schema::create('reductions_clients', function (Blueprint $table) {
            $table->id();
     $table->foreignId('user_id')->constrained('users'); // [cite: 72]
-    $table->foreignId('code_reduction_id')->constrained('code_reduction'); // [cite: 72]
+    $table->foreignId('code_reduction_id')->constrained('codes_reduction'); // [cite: 72]
     $table->date('date_attribution'); // [cite: 72]
     $table->date('date_expiration'); // [cite: 72]
     $table->decimal('montant_fixe', 10, 2)->nullable(); // [cite: 72]
@@ -28,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('reductionclients');
+        Schema::dropIfExists('reductions_client');
     }
 };

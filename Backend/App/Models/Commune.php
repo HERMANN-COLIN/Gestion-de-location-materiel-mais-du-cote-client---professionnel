@@ -9,7 +9,7 @@ class Commune extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nom_commune', 'numero_commune'];
+    protected $fillable = ['nom_commune', 'code_postal'];
 
     public function adresses()
     {

@@ -18,14 +18,7 @@ class PhotoMaterielController extends Controller
         try {
             $photos = PhotoMateriel::where('materiel_id', $materielId)
                 ->orderBy('created_at', 'asc')
-                ->get()
-                ->map(function ($photo) {
-                    // Convertir l'URL relative en URL complète
-                    if ($photo->url_photo && !str_starts_with($photo->url_photo, 'http')) {
-                        $photo->url_photo = url($photo->url_photo);
-                    }
-                    return $photo;
-                });
+                ->get();
 
             return response()->json([
                 'success' => true,
@@ -62,13 +55,10 @@ class PhotoMaterielController extends Controller
             // Upload de la photo
             $path = $request->file('photo')->store('photos/materiels', 'public');
             $urlPhoto = Storage::url($path);
-            
-            // Construire l'URL complète pour le frontend
-            $fullUrl = url($urlPhoto);
 
             $photo = PhotoMateriel::create([
                 'materiel_id' => $request->materiel_id,
-                'url_photo' => $fullUrl
+                'url_photo' => $urlPhoto
             ]);
 
             return response()->json([
@@ -121,12 +111,9 @@ class PhotoMaterielController extends Controller
             // Upload de la nouvelle photo
             $path = $request->file('photo')->store('photos/materiels', 'public');
             $urlPhoto = Storage::url($path);
-            
-            // Construire l'URL complète pour le frontend
-            $fullUrl = url($urlPhoto);
 
             $photo->update([
-                'url_photo' => $fullUrl
+                'url_photo' => $urlPhoto
             ]);
 
             return response()->json([

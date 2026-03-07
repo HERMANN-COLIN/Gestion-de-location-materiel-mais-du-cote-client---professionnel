@@ -1,12 +1,62 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
-import { computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import Footer from '@/components/Footer.vue' // Assurez-vous d'avoir créé le Footer
+import api from '@/services/axios'
+import Footer from '@/components/Footer.vue'
 
 const auth = useAuthStore()
+const mobileMenuOpen = ref(false)
+const panierCount = ref(0)
 
 const isAuthenticated = computed(() => auth.isAuthenticated)
+
+// Charger le nombre d'articles dans le panier
+const loadPanierCount = async () => {
+  if (!isAuthenticated.value) {
+    panierCount.value = 0
+    return
+  }
+  
+  try {
+    const response = await api.get('/panier/compter')
+    if (response.data.success) {
+      panierCount.value = response.data.count
+    }
+  } catch (error) {
+    console.error('Erreur chargement panier:', error)
+    panierCount.value = 0
+  }
+}
+
+// Écouter les mises à jour du panier
+const handleCartUpdate = (event) => {
+  if (event.detail?.count !== undefined) {
+    panierCount.value = event.detail.count
+  } else {
+    loadPanierCount()
+  }
+}
+
+// Écouter les changements d'authentification
+const handleAuthChange = () => {
+  loadPanierCount()
+}
+
+onMounted(() => {
+  loadPanierCount()
+  window.addEventListener('cartUpdated', handleCartUpdate)
+  window.addEventListener('authChanged', handleAuthChange)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('cartUpdated', handleCartUpdate)
+  window.removeEventListener('authChanged', handleAuthChange)
+})
+
+const toggleMobileMenu = () => {
+  mobileMenuOpen.value = !mobileMenuOpen.value
+}
 </script>
 
 <template>
@@ -22,8 +72,13 @@ const isAuthenticated = computed(() => auth.isAuthenticated)
 
         <!-- Barre de recherche -->
         <div class="search-bar">
-          <input type="text" placeholder="Rechercher un matériel..." class="search-input">
-          <button class="search-btn">🔍</button>
+          <input 
+            type="text" 
+            placeholder="Rechercher un matériel..." 
+            class="search-input"
+            @keyup.enter="searchProducts"
+          >
+          <button class="search-btn" @click="searchProducts">🔍</button>
         </div>
 
         <!-- Menu navigation -->
@@ -34,16 +89,12 @@ const isAuthenticated = computed(() => auth.isAuthenticated)
             <span class="nav-text">Catalogue</span>
           </RouterLink>
 
-          <!-- Bouton Panier (toujours visible) -->
+          <!-- Bouton Panier avec badge -->
           <RouterLink to="/panier" class="nav-link cart-link">
             <span class="nav-icon">🛒</span>
             <span class="nav-text">Panier</span>
-            <span class="cart-badge" v-if="isAuthenticated && auth.user?.cart_count">3</span>
+            <span v-if="panierCount > 0" class="cart-badge">{{ panierCount }}</span>
           </RouterLink>
-
-          <!-- Liens standards -->
-          <RouterLink to="/" class="nav-link">Accueil</RouterLink>
-          
 
           <!-- Authentification -->
           <template v-if="!isAuthenticated">
@@ -59,8 +110,7 @@ const isAuthenticated = computed(() => auth.isAuthenticated)
                 <span class="user-name">{{ auth.user?.name || 'Mon Compte' }}</span>
               </RouterLink>
               <div class="dropdown-menu">
-                <RouterLink to="/dashboard" class="dropdown-item">Dashboard</RouterLink>
-                <RouterLink to="/commandes" class="dropdown-item">Mes commandes</RouterLink>
+                
                 <RouterLink to="/profil" class="dropdown-item">Mon profil</RouterLink>
                 <button class="dropdown-item logout" @click="auth.logout()">
                   <span class="logout-icon">🚪</span>
@@ -81,8 +131,9 @@ const isAuthenticated = computed(() => auth.isAuthenticated)
       <div class="mobile-menu" v-if="mobileMenuOpen">
         <RouterLink to="/" class="mobile-link">Accueil</RouterLink>
         <RouterLink to="/catalogue" class="mobile-link">Catalogue</RouterLink>
-        <RouterLink to="/materiels" class="mobile-link">Matériels</RouterLink>
-        <RouterLink to="/panier" class="mobile-link">Panier</RouterLink>
+        <RouterLink to="/panier" class="mobile-link">
+          Panier <span v-if="panierCount > 0">({{ panierCount }})</span>
+        </RouterLink>
         
         <div class="mobile-auth" v-if="!isAuthenticated">
           <RouterLink to="/login" class="mobile-link">Connexion</RouterLink>
@@ -105,25 +156,6 @@ const isAuthenticated = computed(() => auth.isAuthenticated)
     <Footer />
   </div>
 </template>
-
-<script>
-import { ref } from 'vue'
-
-export default {
-  setup() {
-    const mobileMenuOpen = ref(false)
-    
-    const toggleMobileMenu = () => {
-      mobileMenuOpen.value = !mobileMenuOpen.value
-    }
-    
-    return {
-      mobileMenuOpen,
-      toggleMobileMenu
-    }
-  }
-}
-</script>
 
 <style scoped>
 /* ===== BASE ===== */
@@ -259,6 +291,8 @@ export default {
 .cart-link {
   background: #fef3c7;
   color: #92400e;
+  position: relative;
+  padding-right: 1.2rem;
 }
 
 .cart-link:hover {
@@ -267,17 +301,27 @@ export default {
 
 .cart-badge {
   position: absolute;
-  top: -5px;
-  right: -5px;
+  top: -8px;
+  right: -8px;
   background: #ef4444;
   color: white;
   font-size: 0.7rem;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0 4px;
+  font-weight: 700;
+  box-shadow: 0 2px 5px rgba(239, 68, 68, 0.3);
+  animation: badgePop 0.3s ease;
+}
+
+@keyframes badgePop {
+  0% { transform: scale(0); }
+  80% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
 
 /* Boutons */
@@ -374,6 +418,12 @@ export default {
   color: #4b5563;
   border-radius: 6px;
   transition: all 0.2s;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  font-size: 0.95rem;
+  cursor: pointer;
 }
 
 .dropdown-item:hover {
@@ -413,6 +463,10 @@ export default {
   border-bottom: 1px solid #f3f4f6;
 }
 
+.mobile-link:last-child {
+  border-bottom: none;
+}
+
 .mobile-btn {
   display: block;
   width: 100%;
@@ -422,6 +476,13 @@ export default {
   text-decoration: none;
   border-radius: 8px;
   font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+.mobile-btn.danger {
+  background: #ef4444;
+  color: white;
 }
 
 /* ===== CONTENU PRINCIPAL ===== */
@@ -467,6 +528,10 @@ export default {
   
   .main-content {
     padding: 1rem;
+  }
+  
+  .user-name {
+    display: none;
   }
 }
 

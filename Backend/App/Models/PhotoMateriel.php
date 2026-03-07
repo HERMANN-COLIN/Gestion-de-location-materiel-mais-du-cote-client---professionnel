@@ -1,4 +1,4 @@
-<?php
+<?php 
 
 namespace App\Models;
 
@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Materiel;
 
-class PhotoMateriel extends Model  // Notez le singulier "Photo"
+class PhotoMateriel extends Model
 {
     use HasFactory;
 
@@ -14,12 +14,20 @@ class PhotoMateriel extends Model  // Notez le singulier "Photo"
 
     protected $fillable = [
         'materiel_id',
-        'url_photo'
+        'url_photo',
+        'ordre_affichage', // pour trier les images
+        'est_principale'   // pour définir la photo principale
     ];
 
-    // Relation avec le matériel
+    protected $casts = [
+        'est_principale' => 'boolean',
+    ];
+
+    /**
+     * Relation : Une photo appartient à un matériel
+     */
     public function materiel()
     {
-        return $this->belongsTo(Materiel::class, 'materiel_id');
+        return $this->belongsTo(Materiel::class);
     }
 }

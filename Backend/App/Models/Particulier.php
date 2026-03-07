@@ -10,7 +10,7 @@ use App\Models\Langue;
 class Particulier extends Model
 {
      protected $fillable = [
-        'user_id','nom','prenom','adresse','langue_id'
+        'user_id','nom','prenom', 'adresse_livraison_id','langue_id'
     ];
 
     public function user()
@@ -21,5 +21,9 @@ class Particulier extends Model
     public function langue()
     {
         return $this->belongsTo(Langue::class);
+    }
+     public function adresseLivraison()
+    {
+        return $this->belongsTo(Adresse::class, 'adresse_livraison_id');
     }
 }

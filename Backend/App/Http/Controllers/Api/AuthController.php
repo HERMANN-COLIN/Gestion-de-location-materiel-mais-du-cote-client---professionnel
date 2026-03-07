@@ -20,78 +20,61 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        // Log pour débogage
         \Log::info('=== DÉBUT REGISTER ===');
         \Log::info('Données reçues:', $request->all());
 
         try {
-            // Validation de base commune
             $request->validate([
-                'email' => 'required|email|unique:users',
-                'password' => 'required|min:8|confirmed',
-                'type_id' => 'required|in:1,2', // 1 = particulier, 2 = professionnel
+                'email'     => 'required|email|unique:users',
+                'password'  => 'required|min:8|confirmed',
+                'type_id'   => 'required|in:1,2',
                 'langue_id' => 'required|exists:langues,id',
             ]);
 
-            \Log::info('Validation de base passée');
-
-            // Validation conditionnelle selon le type
             if ($request->type_id == 1) {
-                // PARTICULIER
                 $request->validate([
-                    'nom' => 'required|string|max:255',
-                    'prenom' => 'required|string|max:255',
-                    'adresse' => 'required|string|max:500',
+                    'nom'         => 'required|string|max:255',
+                    'prenom'      => 'required|string|max:255',
+                    'nom_rue'     => 'required|string|max:255',
+                    'numero_rue'  => 'required|string|max:10',
+                    'nom_commune' => 'required|string|max:255',
+                    'code_postal' => 'required|string|max:10',
                 ]);
-                \Log::info('Validation particulier passée');
             } else {
-                // PROFESSIONNEL
                 $request->validate([
-                    'nom_societe' => 'required|string|max:255',
-                    'heure_ouverture' => 'required|date_format:H:i',
-                    'heure_fermeture' => 'required|date_format:H:i',
-                    
-                    // Adresse du siège
-                    'nom_rue_siege' => 'required|string|max:255',
-                    'numero_rue_siege' => 'required|string|max:10',
-                    'nom_commune_siege' => 'required|string|max:255',
-                    'numero_commune_siege' => 'required|string|max:10',
-                    
-                    // Contact professionnel
-                    'contact_nom' => 'required|string|max:100',
-                    'contact_prenom' => 'required|string|max:100',
-                    'contact_email' => 'required|email|max:255',
-                    'contact_telephone' => 'required|string|max:20',
+                    'nom_societe'         => 'required|string|max:255',
+                    'heure_ouverture'     => 'required|date_format:H:i',
+                    'heure_fermeture'     => 'required|date_format:H:i',
+                    'nom_rue_siege'       => 'required|string|max:255',
+                    'numero_rue_siege'    => 'required|string|max:10',
+                    'nom_commune_siege'   => 'required|string|max:255',
+                    'code_postal_siege'   => 'required|string|max:10',
+                    'contact_nom'         => 'required|string|max:100',
+                    'contact_prenom'      => 'required|string|max:100',
+                    'contact_email'       => 'required|email|max:255',
+                    'contact_telephone'   => 'required|string|max:20',
                     'contact_fonction_id' => 'required|exists:fonctions,id',
                 ]);
 
-                \Log::info('Validation professionnel passée');
-
-                // Validation optionnelle pour l'adresse de livraison
                 if ($request->has('has_different_delivery_address') && $request->has_different_delivery_address) {
                     $request->validate([
-                        'nom_rue_livraison' => 'required|string|max:255',
-                        'numero_rue_livraison' => 'required|string|max:10',
+                        'nom_rue_livraison'     => 'required|string|max:255',
+                        'numero_rue_livraison'  => 'required|string|max:10',
                         'nom_commune_livraison' => 'required|string|max:255',
-                        'numero_commune_livraison' => 'required|string|max:10',
+                        'code_postal_livraison' => 'required|string|max:10',
                     ]);
-                    \Log::info('Validation adresse livraison passée');
                 }
             }
 
             DB::beginTransaction();
-            
+
             try {
-                // Création de l'utilisateur
                 $user = User::create([
-                    'email' => $request->email,
+                    'email'    => $request->email,
                     'password' => Hash::make($request->password),
-                    'type_id' => $request->type_id,
+                    'type_id'  => $request->type_id,
                 ]);
 
-                \Log::info('Utilisateur créé', ['id' => $user->id, 'email' => $user->email]);
-
-                // Traitement selon le type d'utilisateur
                 if ($request->type_id == 1) {
                     $this->createParticulier($user, $request);
                 } else {
@@ -99,165 +82,33 @@ class AuthController extends Controller
                 }
 
                 DB::commit();
-                \Log::info('Transaction commitée');
 
-                // Génération du token
                 $token = $user->createToken('auth_token')->plainTextToken;
-
-                // Chargement des relations
-                $user->load(['type', 'particulier', 'professionnel.contactPro']);
-
-                \Log::info('=== INSCRIPTION RÉUSSIE ===', ['user_id' => $user->id]);
 
                 return response()->json([
                     'success' => true,
-                    'token' => $token,
-                    'user' => $user,
+                    'token'   => $token,
+                    'data'    => $this->buildProfileData($user),
                     'message' => 'Inscription réussie'
                 ], 201);
 
             } catch (\Exception $e) {
                 DB::rollBack();
-                \Log::error('Erreur transaction', [
-                    'message' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]);
-                
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Erreur lors de l\'inscription',
-                    'error' => $e->getMessage()
-                ], 500);
+                \Log::error('Erreur transaction register', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+                return response()->json(['success' => false, 'message' => "Erreur lors de l'inscription", 'error' => $e->getMessage()], 500);
             }
 
         } catch (ValidationException $e) {
-            \Log::error('Erreur validation', ['errors' => $e->errors()]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur de validation',
-                'errors' => $e->errors()
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'Erreur de validation', 'errors' => $e->errors()], 422);
         } catch (\Exception $e) {
-            \Log::error('Erreur générale', ['message' => $e->getMessage()]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur serveur',
-                'error' => $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Erreur serveur', 'error' => $e->getMessage()], 500);
         }
-    }
-
-    /**
-     * Crée un profil particulier
-     */
-    private function createParticulier(User $user, Request $request)
-    {
-        \Log::info('Création particulier', ['user_id' => $user->id]);
-        
-        $particulier = Particulier::create([
-            'user_id' => $user->id,
-            'nom' => $request->nom,
-            'prenom' => $request->prenom,
-            'adresse' => $request->adresse,
-            'langue_id' => $request->langue_id,
-        ]);
-
-        \Log::info('Particulier créé', ['id' => $particulier->id]);
-        
-        return $particulier;
-    }
-
-    /**
-     * Crée un profil professionnel avec contact
-     */
-    private function createProfessionnel(User $user, Request $request)
-    {
-        \Log::info('Création professionnel', ['user_id' => $user->id]);
-        
-        // 1. Créer ou récupérer la commune du siège
-        \Log::info('Recherche/creation commune siège', [
-            'nom' => $request->nom_commune_siege,
-            'numero' => $request->numero_commune_siege
-        ]);
-        
-        $communeSiege = Commune::firstOrCreate([
-            'nom_commune' => $request->nom_commune_siege,
-            'numero_commune' => $request->numero_commune_siege,
-        ]);
-
-        \Log::info('Commune siège', ['id' => $communeSiege->id]);
-
-        // 2. Créer l'adresse du siège
-        $adresseSiege = Adresse::create([
-            'nom_rue' => $request->nom_rue_siege,
-            'numero_rue' => $request->numero_rue_siege,
-            'commune_id' => $communeSiege->id,
-        ]);
-
-        \Log::info('Adresse siège créée', ['id' => $adresseSiege->id]);
-
-        // 3. Déterminer l'adresse de livraison
-        $adresseLivraison = $adresseSiege; // Par défaut
-        
-        if ($request->has('has_different_delivery_address') && 
-            $request->has_different_delivery_address &&
-            !empty($request->nom_rue_livraison) && 
-            !empty($request->numero_rue_livraison) &&
-            !empty($request->nom_commune_livraison) &&
-            !empty($request->numero_commune_livraison)) {
-            
-            \Log::info('Adresse livraison différente détectée');
-            
-            // Créer ou récupérer la commune de livraison
-            $communeLivraison = Commune::firstOrCreate([
-                'nom_commune' => $request->nom_commune_livraison,
-                'numero_commune' => $request->numero_commune_livraison,
-            ]);
-            
-            // Créer une adresse de livraison distincte
-            $adresseLivraison = Adresse::create([
-                'nom_rue' => $request->nom_rue_livraison,
-                'numero_rue' => $request->numero_rue_livraison,
-                'commune_id' => $communeLivraison->id,
-            ]);
-            
-            \Log::info('Adresse livraison créée', ['id' => $adresseLivraison->id]);
-        } else {
-            \Log::info('Même adresse pour livraison');
-        }
-
-        // 4. Créer le professionnel
-        $professionnel = Professionnel::create([
-            'user_id' => $user->id,
-            'nom_societe' => $request->nom_societe,
-            'adresse_siege_id' => $adresseSiege->id,
-            'adresse_livraison_id' => $adresseLivraison->id,
-            'heure_ouverture' => $request->heure_ouverture,
-            'heure_fermeture' => $request->heure_fermeture,
-            'langue_id' => $request->langue_id,
-        ]);
-
-        \Log::info('Professionnel créé', ['id' => $professionnel->id]);
-
-        // 5. Créer le contact professionnel
-        $contact = ContactPro::create([
-            'professionnel_id' => $professionnel->id,
-            'nom' => $request->contact_nom,
-            'prenom' => $request->contact_prenom,
-            'email' => $request->contact_email,
-            'telephone' => $request->contact_telephone,
-            'fonction_id' => $request->contact_fonction_id,
-        ]);
-
-        \Log::info('Contact pro créé', ['id' => $contact->id]);
-        
-        return $professionnel;
     }
 
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'email'    => 'required|email',
             'password' => 'required',
         ]);
 
@@ -271,19 +122,13 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Charger les relations selon le type
-        if ($user->type_id == 1) {
-            $user->load(['type', 'particulier.langue']);
-        } else {
-            $user->load(['type', 'professionnel' => function($query) {
-                $query->with(['adresseSiege.commune', 'adresseLivraison.commune', 'langue', 'contactPro.fonction']);
-            }]);
-        }
-
+        // ✅ buildProfileData() charge les relations en interne
+        //    Structure plate { data: { type, email, nom/nom_societe, ... } }
+        //    attendue par le store Pinia (auth.js)
         return response()->json([
             'success' => true,
-            'token' => $token,
-            'user' => $user,
+            'token'   => $token,
+            'data'    => $this->buildProfileData($user),
         ]);
     }
 
@@ -297,42 +142,288 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * GET /api/user
+     *
+     * AVANT : renvoyait { success, user: { particulier: { nom, prenom } } }
+     *         ProfileView lisait response.data.data.nom → undefined
+     *
+     * APRÈS : renvoie  { success, data: { type, email, nom, prenom, adresse, ... } }
+     *         ProfileView lit response.data.data.nom → ✅
+     */
     public function user(Request $request)
     {
         $user = $request->user();
-        
+
         if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Utilisateur non authentifié'
-            ], 401);
-        }
-        
-        // Charger les relations selon le type
-        if ($user->type_id == 1) {
-            $user->load(['type', 'particulier.langue']);
-        } else {
-            $user->load(['type', 'professionnel' => function($query) {
-                $query->with(['adresseSiege.commune', 'adresseLivraison.commune', 'langue', 'contactPro.fonction']);
-            }]);
+            return response()->json(['success' => false, 'message' => 'Utilisateur non authentifié'], 401);
         }
 
         return response()->json([
             'success' => true,
-            'user' => $user
+            'data'    => $this->buildProfileData($user),
         ]);
     }
 
+    // =========================================================================
+    // buildProfileData — structure plate attendue par ProfileView.vue
+    // =========================================================================
+
     /**
-     * Route de test simple
+     * Retourne un tableau plat avec toutes les infos du profil.
+     *
+     * Particulier  → { id, email, type, nom, prenom, adresse, langue_id, langue }
+     * Professionnel→ { id, email, type, nom_societe, telephone, heure_ouverture,
+     *                  heure_fermeture, adresse_siege, adresse_livraison_defaut,
+     *                  langue_id, langue, contact:{nom,prenom,telephone,email} }
      */
-    public function test(Request $request)
+    private function buildProfileData(User $user): array
     {
-        return response()->json([
-            'success' => true,
-            'message' => 'Route register fonctionne!',
-            'data' => $request->all(),
-            'timestamp' => now()
-        ], 200);
+        $user->load('type');
+
+        $data = [
+            'id'         => $user->id,
+            'email'      => $user->email,
+            'type'       => $user->type?->type ?? 'particulier',
+            'type_id'    => $user->type_id,
+            'created_at' => $user->created_at,
+        ];
+
+        if (($user->type?->type ?? 'particulier') === 'particulier') {
+
+            $particulier = Particulier::with(['langue', 'adresseLivraison.commune'])
+                ->where('user_id', $user->id)
+                ->first();
+
+            if ($particulier) {
+                $data['nom']       = $particulier->nom       ?? '';
+                $data['prenom']    = $particulier->prenom    ?? '';
+                $data['langue_id'] = $particulier->langue_id ?? '';
+                $data['langue']    = $particulier->langue;
+                $data['adresse']   = $this->formatAdresse($particulier->adresseLivraison);
+            }
+
+        } else {
+
+            $professionnel = Professionnel::with([
+                'langue',
+                'adresseSiege.commune',
+                'adresseLivraison.commune',
+                'contactPro.fonction',
+            ])->where('user_id', $user->id)->first();
+
+            if ($professionnel) {
+                $data['nom_societe']              = $professionnel->nom_societe     ?? '';
+                $data['telephone']                = $professionnel->telephone       ?? '';
+                $data['heure_ouverture']          = $professionnel->heure_ouverture ?? '';
+                $data['heure_fermeture']          = $professionnel->heure_fermeture ?? '';
+                $data['langue_id']                = $professionnel->langue_id       ?? '';
+                $data['langue']                   = $professionnel->langue;
+                $data['adresse_siege']            = $this->formatAdresse($professionnel->adresseSiege);
+                $data['adresse_livraison_defaut'] = $this->formatAdresse($professionnel->adresseLivraison);
+
+                if ($professionnel->contactPro) {
+                    $data['contact'] = [
+                        'nom'       => $professionnel->contactPro->nom,
+                        'prenom'    => $professionnel->contactPro->prenom,
+                        'telephone' => $professionnel->contactPro->telephone,
+                        'email'     => $professionnel->contactPro->email,
+                    ];
+                }
+            }
+        }
+
+        return $data;
     }
+
+    private function formatAdresse($adresse): string
+    {
+        if (!$adresse) return '';
+        $rue = trim(($adresse->numero_rue ?? '') . ' ' . ($adresse->nom_rue ?? ''));
+        if ($adresse->commune) {
+            $cp    = $adresse->commune->code_postal ?? '';
+            $ville = $adresse->commune->nom_commune ?? '';
+            if ($cp && $ville) return trim("$rue, $cp $ville");
+            if ($ville)        return trim("$rue, $ville");
+        }
+        return $rue;
+    }
+
+    // =========================================================================
+    // Création des profils (logique inchangée)
+    // =========================================================================
+
+    private function createParticulier(User $user, Request $request)
+    {
+        \Log::info('Création particulier', ['user_id' => $user->id]);
+
+        $commune = Commune::firstOrCreate([
+            'nom_commune' => $request->nom_commune,
+            'code_postal' => $request->code_postal,
+        ]);
+
+        $adresse = Adresse::create([
+            'nom_rue'    => $request->nom_rue,
+            'numero_rue' => $request->numero_rue,
+            'commune_id' => $commune->id,
+        ]);
+
+        $particulier = Particulier::create([
+            'user_id'              => $user->id,
+            'nom'                  => $request->nom,
+            'prenom'               => $request->prenom,
+            'langue_id'            => $request->langue_id,
+            'adresse_livraison_id' => $adresse->id,
+        ]);
+
+        \Log::info('Particulier créé', ['id' => $particulier->id]);
+        return $particulier;
+    }
+
+    private function createProfessionnel(User $user, Request $request)
+    {
+        \Log::info('Création professionnel', ['user_id' => $user->id]);
+
+        $communeSiege = Commune::firstOrCreate([
+            'nom_commune' => $request->nom_commune_siege,
+            'code_postal' => $request->code_postal_siege,
+        ]);
+
+        $adresseSiege = Adresse::create([
+            'nom_rue'    => $request->nom_rue_siege,
+            'numero_rue' => $request->numero_rue_siege,
+            'commune_id' => $communeSiege->id,
+        ]);
+
+        $adresseLivraison = $adresseSiege;
+
+        if ($request->has('has_different_delivery_address') &&
+            $request->has_different_delivery_address &&
+            !empty($request->nom_rue_livraison)) {
+
+            $communeLivraison = Commune::firstOrCreate([
+                'nom_commune' => $request->nom_commune_livraison,
+                'code_postal' => $request->code_postal_livraison,
+            ]);
+
+            $adresseLivraison = Adresse::create([
+                'nom_rue'    => $request->nom_rue_livraison,
+                'numero_rue' => $request->numero_rue_livraison,
+                'commune_id' => $communeLivraison->id,
+            ]);
+        }
+
+        $professionnel = Professionnel::create([
+            'user_id'              => $user->id,
+            'nom_societe'          => $request->nom_societe,
+            'adresse_siege_id'     => $adresseSiege->id,
+            'adresse_livraison_id' => $adresseLivraison->id,
+            'heure_ouverture'      => $request->heure_ouverture,
+            'heure_fermeture'      => $request->heure_fermeture,
+            'langue_id'            => $request->langue_id,
+        ]);
+
+        ContactPro::create([
+            'professionnel_id' => $professionnel->id,
+            'nom'              => $request->contact_nom,
+            'prenom'           => $request->contact_prenom,
+            'email'            => $request->contact_email,
+            'telephone'        => $request->contact_telephone,
+            'fonction_id'      => $request->contact_fonction_id,
+        ]);
+
+        \Log::info('Professionnel créé', ['id' => $professionnel->id]);
+        return $professionnel;
+    }
+
+    /**
+     * PUT /api/user/profile
+     * Met à jour le profil de l'utilisateur connecté.
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Non authentifié'], 401);
+        }
+
+        $user->load('type');
+        $type = $user->type?->type ?? 'particulier';
+
+        DB::beginTransaction();
+        try {
+            // ── Mise à jour email / mot de passe ────────────────────────────
+            if ($request->filled('email') && $request->email !== $user->email) {
+                $request->validate(['email' => 'required|email|unique:users,email,' . $user->id]);
+                $user->email = $request->email;
+            }
+
+            if ($request->filled('password')) {
+                $request->validate(['password' => 'required|min:8|confirmed']);
+                $user->password = Hash::make($request->password);
+            }
+
+            $user->save();
+
+            // ── Mise à jour profil selon le type ────────────────────────────
+            if ($type === 'particulier') {
+                $particulier = Particulier::where('user_id', $user->id)->first();
+                if ($particulier) {
+                    if ($request->filled('nom'))       $particulier->nom       = $request->nom;
+                    if ($request->filled('prenom'))    $particulier->prenom    = $request->prenom;
+                    if ($request->filled('langue_id')) $particulier->langue_id = $request->langue_id;
+                    $particulier->save();
+
+                    // Mise à jour adresse
+                    if ($request->filled('nom_rue') || $request->filled('numero_rue') ||
+                        $request->filled('nom_commune') || $request->filled('code_postal')) {
+
+                        $adresse = Adresse::find($particulier->adresse_livraison_id);
+                        if ($adresse) {
+                            if ($request->filled('nom_rue'))    $adresse->nom_rue    = $request->nom_rue;
+                            if ($request->filled('numero_rue')) $adresse->numero_rue = $request->numero_rue;
+
+                            if ($request->filled('nom_commune') || $request->filled('code_postal')) {
+                                $commune = Commune::firstOrCreate([
+                                    'nom_commune' => $request->nom_commune ?? $adresse->commune->nom_commune ?? '',
+                                    'code_postal' => $request->code_postal ?? $adresse->commune->code_postal ?? '',
+                                ]);
+                                $adresse->commune_id = $commune->id;
+                            }
+                            $adresse->save();
+                        }
+                    }
+                }
+            } else {
+                $professionnel = Professionnel::where('user_id', $user->id)->first();
+                if ($professionnel) {
+                    if ($request->filled('nom_societe'))    $professionnel->nom_societe    = $request->nom_societe;
+                    if ($request->filled('telephone'))      $professionnel->telephone      = $request->telephone;
+                    if ($request->filled('heure_ouverture'))$professionnel->heure_ouverture= $request->heure_ouverture;
+                    if ($request->filled('heure_fermeture'))$professionnel->heure_fermeture= $request->heure_fermeture;
+                    if ($request->filled('langue_id'))      $professionnel->langue_id      = $request->langue_id;
+                    $professionnel->save();
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profil mis à jour avec succès',
+                'data'    => $this->buildProfileData($user),
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Erreur updateProfile', ['message' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la mise à jour',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }

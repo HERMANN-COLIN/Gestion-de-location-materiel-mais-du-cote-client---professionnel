@@ -13,12 +13,9 @@ const routes = [
     },
      {
     path: '/profil',
-    name: 'profile',
+    name: 'profil',
     component: () => import('../components/Profil.vue'),
-    meta: { 
-      title: 'Mon Profil',
-      requiresAuth: true 
-    }
+   
   },
     
     {
@@ -27,11 +24,24 @@ const routes = [
         component: () => import('../views/MaterielDetail.vue'),
         props: true,
     },
+
     {
         path: '/panier',
         name: 'Panier',
         component: () => import('../views/Panier.vue'),
-        meta: { requiresAuth: true },
+       
+    },
+       {
+        path: '/checkout',
+        name: 'Checkout',
+        component: () => import('../views/Checkout.vue'),
+       
+    },
+         {
+        path: '/commandes/:id',
+        name: 'DetailsCommande',
+        component: () => import('../views/DetailsCommande.vue'),
+       
     },
     {
         path: '/login',
@@ -51,6 +61,13 @@ const routes = [
         component: () => import('../components/Register.vue'),
         meta: { guestOnly: true },
     },
+      {
+        path: '/dashboard',
+        name: 'Dashboard',
+        component: () => import('../components/Dashboard.vue'),
+       
+    },
+   
    
 ];
 
