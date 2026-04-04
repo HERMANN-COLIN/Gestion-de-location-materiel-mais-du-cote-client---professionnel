@@ -354,12 +354,260 @@
 
           <!-- ===================== ONGLET SÉCURITÉ ===================== -->
           <div v-else-if="activeTab === 'security'" class="tab-content">
-            <!-- ... (contenu inchangé) ... -->
+            <div class="tab-header">
+              <h2>Sécurité du compte</h2>
+              <p>Gérez votre mot de passe et la sécurité de votre compte</p>
+            </div>
+
+            <!-- Statistiques de sécurité -->
+            <div class="security-stats">
+              <div class="stat-card">
+                <div class="stat-icon">🔐</div>
+                <div class="stat-info">
+                  <div class="stat-value">Dernière connexion</div>
+                  <div class="stat-label">{{ userData?.last_login ? formatDate(userData.last_login) : 'Aujourd\'hui' }}</div>
+                </div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon">🛡️</div>
+                <div class="stat-info">
+                  <div class="stat-value">Méthode 2FA</div>
+                  <div class="stat-label">Non activée</div>
+                </div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon">📱</div>
+                <div class="stat-info">
+                  <div class="stat-value">Appareils connectés</div>
+                  <div class="stat-label">1 appareil</div>
+                </div>
+              </div>
+            </div>
+
+            <form @submit.prevent="updatePassword" class="security-form">
+              <div class="form-section">
+                <h3>Changer le mot de passe</h3>
+
+                <div class="form-group">
+                  <label for="current_password">Mot de passe actuel *</label>
+                  <div class="password-input">
+                    <input 
+                      id="current_password" 
+                      v-model="passwordForm.current_password"
+                      :type="showCurrentPassword ? 'text' : 'password'" 
+                      required
+                      :class="{ 'error': passwordErrors.current_password }"
+                      placeholder="Entrez votre mot de passe actuel"
+                    >
+                    <button type="button" @click="showCurrentPassword = !showCurrentPassword" class="password-toggle">
+                      {{ showCurrentPassword ? '🙈' : '👁️' }}
+                    </button>
+                  </div>
+                  <p v-if="passwordErrors.current_password" class="error-message">{{ passwordErrors.current_password[0] }}</p>
+                </div>
+
+                <div class="form-group">
+                  <label for="new_password">Nouveau mot de passe *</label>
+                  <div class="password-input">
+                    <input 
+                      id="new_password" 
+                      v-model="passwordForm.new_password"
+                      :type="showNewPassword ? 'text' : 'password'" 
+                      required
+                      minlength="8"
+                      :class="{ 'error': passwordErrors.new_password }"
+                      placeholder="8 caractères minimum"
+                    >
+                    <button type="button" @click="showNewPassword = !showNewPassword" class="password-toggle">
+                      {{ showNewPassword ? '🙈' : '👁️' }}
+                    </button>
+                  </div>
+                  <p v-if="passwordErrors.new_password" class="error-message">{{ passwordErrors.new_password[0] }}</p>
+                  
+                  <!-- Indicateur de force du mot de passe -->
+                  <div class="password-strength" v-if="passwordForm.new_password">
+                    <div class="strength-bar" :class="getPasswordStrength(passwordForm.new_password)"></div>
+                    <span class="strength-text">Force : {{ getPasswordStrengthText(passwordForm.new_password) }}</span>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="new_password_confirmation">Confirmer le nouveau mot de passe *</label>
+                  <div class="password-input">
+                    <input 
+                      id="new_password_confirmation" 
+                      v-model="passwordForm.new_password_confirmation"
+                      :type="showConfirmPassword ? 'text' : 'password'" 
+                      required
+                      :class="{ 'error': passwordErrors.new_password_confirmation }"
+                      placeholder="Répétez le nouveau mot de passe"
+                    >
+                    <button type="button" @click="showConfirmPassword = !showConfirmPassword" class="password-toggle">
+                      {{ showConfirmPassword ? '🙈' : '👁️' }}
+                    </button>
+                  </div>
+                  <p v-if="passwordErrors.new_password_confirmation" class="error-message">{{ passwordErrors.new_password_confirmation[0] }}</p>
+                </div>
+
+                <div class="password-requirements">
+                  <p><strong>Le mot de passe doit contenir :</strong></p>
+                  <ul>
+                    <li :class="{ 'valid': passwordForm.new_password.length >= 8 }">
+                      {{ passwordForm.new_password.length >= 8 ? '✅' : '❌' }} Au moins 8 caractères
+                    </li>
+                    <li :class="{ 'valid': /[A-Z]/.test(passwordForm.new_password) }">
+                      {{ /[A-Z]/.test(passwordForm.new_password) ? '✅' : '❌' }} Une majuscule
+                    </li>
+                    <li :class="{ 'valid': /[a-z]/.test(passwordForm.new_password) }">
+                      {{ /[a-z]/.test(passwordForm.new_password) ? '✅' : '❌' }} Une minuscule
+                    </li>
+                    <li :class="{ 'valid': /[0-9]/.test(passwordForm.new_password) }">
+                      {{ /[0-9]/.test(passwordForm.new_password) ? '✅' : '❌' }} Un chiffre
+                    </li>
+                    <li :class="{ 'valid': /[^A-Za-z0-9]/.test(passwordForm.new_password) }">
+                      {{ /[^A-Za-z0-9]/.test(passwordForm.new_password) ? '✅' : '❌' }} Un caractère spécial
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" :disabled="passwordLoading" class="save-btn">
+                  <span v-if="!passwordLoading">Mettre à jour le mot de passe</span>
+                  <span v-else class="loading-spinner"></span>
+                </button>
+              </div>
+            </form>
+
+            <!-- Section de suppression du compte -->
+            <div class="danger-zone">
+              <h3>Zone dangereuse</h3>
+              <div class="danger-card">
+                <div class="danger-icon">⚠️</div>
+                <div class="danger-content">
+                  <h4>Supprimer mon compte</h4>
+                  <p>Cette action est irréversible. Toutes vos données seront supprimées définitivement.</p>
+                  <button @click="deleteAccount" class="delete-account-btn">
+                    Supprimer mon compte
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- ===================== ONGLET NOTIFICATIONS ===================== -->
           <div v-else-if="activeTab === 'notifications'" class="tab-content">
-            <!-- ... (contenu inchangé) ... -->
+            <div class="tab-header">
+              <h2>Préférences de notifications</h2>
+              <p>Choisissez les notifications que vous souhaitez recevoir</p>
+            </div>
+
+            <form @submit.prevent="updateNotifications" class="notifications-form">
+              <!-- Notifications par email -->
+              <div class="form-section">
+                <h3>Notifications par email</h3>
+                <div class="checkbox-group">
+                  <label class="checkbox-item">
+                    <input type="checkbox" v-model="notifications.email.commandes" class="checkbox-input">
+                    <span class="checkbox-label">
+                      <span class="checkbox-title">📦 Nouvelles commandes</span>
+                      <span class="checkbox-description">Recevoir un email lors de la création d'une nouvelle commande</span>
+                    </span>
+                  </label>
+
+                  <label class="checkbox-item">
+                    <input type="checkbox" v-model="notifications.email.statut" class="checkbox-input">
+                    <span class="checkbox-label">
+                      <span class="checkbox-title">🔄 Changements de statut</span>
+                      <span class="checkbox-description">Être informé des mises à jour de vos commandes (confirmation, préparation, livraison)</span>
+                    </span>
+                  </label>
+
+                  <label class="checkbox-item">
+                    <input type="checkbox" v-model="notifications.email.promotions" class="checkbox-input">
+                    <span class="checkbox-label">
+                      <span class="checkbox-title">🎁 Promotions et offres spéciales</span>
+                      <span class="checkbox-description">Recevoir nos offres exclusives et codes promo</span>
+                    </span>
+                  </label>
+
+                  <label class="checkbox-item">
+                    <input type="checkbox" v-model="notifications.email.newsletter" class="checkbox-input">
+                    <span class="checkbox-label">
+                      <span class="checkbox-title">📧 Newsletter</span>
+                      <span class="checkbox-description">Recevoir nos actualités, conseils et nouveautés</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Notifications SMS -->
+              <div class="form-section">
+                <h3>Notifications par SMS</h3>
+                <div class="checkbox-group">
+                  <label class="checkbox-item">
+                    <input type="checkbox" v-model="notifications.sms.confirmation" class="checkbox-input">
+                    <span class="checkbox-label">
+                      <span class="checkbox-title">✅ Confirmation de commande</span>
+                      <span class="checkbox-description">Recevoir un SMS de confirmation après chaque commande</span>
+                    </span>
+                  </label>
+
+                  <label class="checkbox-item">
+                    <input type="checkbox" v-model="notifications.sms.livraison" class="checkbox-input">
+                    <span class="checkbox-label">
+                      <span class="checkbox-title">🚚 Suivi de livraison</span>
+                      <span class="checkbox-description">Recevoir des SMS lors de la livraison de vos commandes</span>
+                    </span>
+                  </label>
+
+                  <label class="checkbox-item" v-if="userType === 'professionnel'">
+                    <input type="checkbox" v-model="notifications.sms.alerte" class="checkbox-input">
+                    <span class="checkbox-label">
+                      <span class="checkbox-title">⚠️ Alertes professionnelles</span>
+                      <span class="checkbox-description">Recevoir des alertes importantes concernant vos locations</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Fréquence des notifications -->
+              <div class="form-section">
+                <h3>Fréquence des notifications</h3>
+                <div class="radio-group">
+                  <label class="radio-item">
+                    <input type="radio" v-model="notifications.frequence" value="instant" class="radio-input">
+                    <span class="radio-label">
+                      <span class="radio-title">📱 Instantané</span>
+                      <span class="radio-description">Recevoir les notifications immédiatement</span>
+                    </span>
+                  </label>
+
+                  <label class="radio-item">
+                    <input type="radio" v-model="notifications.frequence" value="daily" class="radio-input">
+                    <span class="radio-label">
+                      <span class="radio-title">📅 Résumé quotidien</span>
+                      <span class="radio-description">Recevoir un résumé des notifications une fois par jour</span>
+                    </span>
+                  </label>
+
+                  <label class="radio-item">
+                    <input type="radio" v-model="notifications.frequence" value="weekly" class="radio-input">
+                    <span class="radio-label">
+                      <span class="radio-title">📊 Résumé hebdomadaire</span>
+                      <span class="radio-description">Recevoir un résumé des notifications une fois par semaine</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" :disabled="notificationsLoading" class="save-btn">
+                  <span v-if="!notificationsLoading">Enregistrer les préférences</span>
+                  <span v-else class="loading-spinner"></span>
+                </button>
+              </div>
+            </form>
           </div>
 
         </div><!-- /profile-main -->
@@ -433,7 +681,18 @@ const passwordForm = ref({
 })
 
 const notifications = ref({
-  email: { commandes: true, statut: true, promotions: true, newsletter: true }
+  email: {
+    commandes: true,
+    statut: true,
+    promotions: true,
+    newsletter: true
+  },
+  sms: {
+    confirmation: false,
+    livraison: false,
+    alerte: false
+  },
+  frequence: 'instant'
 })
 
 const showCurrentPassword = ref(false)
@@ -478,7 +737,6 @@ const getItemImage = (item) => {
   if (!item) return getInitialsImage('')
 
   try {
-    // 1. Photos dans la relation (avec URLs déjà construites par le backend)
     if (Array.isArray(item.photos) && item.photos.length > 0) {
       for (const photo of item.photos) {
         if (photo.url_photo) return photo.url_photo
@@ -488,13 +746,11 @@ const getItemImage = (item) => {
       }
     }
 
-    // 2. Champ photo direct
     if (item.photo) {
       const url = buildImageUrl(item.photo)
       if (url) return url
     }
 
-    // 3. Dans le pivot
     if (item.pivot?.photo_url) {
       const url = buildImageUrl(item.pivot.photo_url)
       if (url) return url
@@ -542,15 +798,13 @@ const getNombreJours = (commande) => {
   const debut = new Date(commande.date_debut)
   const fin = new Date(commande.date_fin)
   const diff = Math.ceil((fin - debut) / (1000 * 60 * 60 * 24))
-  return diff > 0 ? diff + 1 : 1 // +1 pour inclure le dernier jour
+  return diff > 0 ? diff + 1 : 1
 }
 
 const getItemSousTotalHT = (item, commande) => {
-  // Priorité au pivot
   const fromPivot = parseFloat(item.pivot?.sous_total_ht ?? NaN)
   if (!isNaN(fromPivot) && fromPivot > 0) return fromPivot
 
-  // Recalcul
   const prix = getPrixUnitaireHT(item)
   const qte = getQuantite(item)
   const jours = getNombreJours(commande)
@@ -558,11 +812,9 @@ const getItemSousTotalHT = (item, commande) => {
 }
 
 const getItemSousTotalTTC = (item, commande) => {
-  // Priorité au pivot
   const fromPivot = parseFloat(item.pivot?.sous_total_ttc ?? NaN)
   if (!isNaN(fromPivot) && fromPivot > 0) return fromPivot
 
-  // Recalcul à partir du HT
   const ht = getItemSousTotalHT(item, commande)
   const tva = ht * (getTauxTVA(item) / 100)
   return ht + tva
@@ -606,11 +858,9 @@ const calculateTotalAvantRemise = (commande) => {
 const calculateRemise = (commande) => {
   if (!commande.code_reduction) return 0
 
-  // Si la remise est explicitement stockée
   const explicit = parseFloat(commande.code_reduction.montant_remise ?? NaN)
   if (!isNaN(explicit) && explicit > 0) return explicit
 
-  // Sinon on la déduit
   const avantRemise = calculateTotalAvantRemise(commande)
   const montantFinal = parseFloat(commande.montant_total ?? NaN)
   if (!isNaN(montantFinal) && montantFinal < avantRemise) {
@@ -626,14 +876,12 @@ const calculateRemise = (commande) => {
 
 const loadUserData = async () => {
   try {
-    const response = await api.get('/user') // Assurez-vous que c'est bien '/user' et non '/user/profile'
+    const response = await api.get('/user')
     
-    // Vérification sécurisée de la réponse
     if (response.data && response.data.success && response.data.data) {
       const data = response.data.data
       userData.value = data
 
-      // Initialisation sécurisée du formulaire
       if (data.type === 'particulier') {
         form.value = {
           email:     data.email || '',
@@ -762,6 +1010,30 @@ const updateNotifications = async () => {
     errorMessage.value = 'Erreur lors de la mise à jour des notifications'
   } finally {
     notificationsLoading.value = false
+  }
+}
+
+const deleteAccount = async () => {
+  if (!confirm('⚠️ Attention : Cette action est irréversible. Toutes vos données seront supprimées définitivement. Êtes-vous absolument sûr ?')) return
+  
+  const password = prompt('Pour confirmer la suppression de votre compte, veuillez entrer votre mot de passe :')
+  if (!password) return
+  
+  const confirmation = prompt('Tapez "DELETE" pour confirmer la suppression :')
+  if (confirmation !== 'DELETE') {
+    errorMessage.value = 'Confirmation incorrecte'
+    return
+  }
+  
+  try {
+    const response = await api.delete('/user', { data: { password, confirmation: 'DELETE' } })
+    if (response.data.success) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      router.push('/login')
+    }
+  } catch (error) {
+    errorMessage.value = error.response?.data?.message || 'Erreur lors de la suppression du compte'
   }
 }
 
@@ -900,74 +1172,6 @@ onMounted(() => loadData())
 </script>
 
 <style scoped>
-/* ... (styles inchangés, mais ajoutez ceux-ci) ... */
-
-.item-details {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.item-quantity, .item-duration {
-  background: #f3f4f6;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.85rem;
-}
-
-.item-taxes {
-  font-size: 0.8rem;
-  color: #6b7280;
-  margin-top: 4px;
-}
-
-.item-pricing {
-  text-align: right;
-}
-
-.item-subtotal-ht {
-  font-size: 0.9rem;
-  color: #6b7280;
-}
-
-.item-subtotal-ttc {
-  font-weight: 700;
-  color: #10b981;
-  font-size: 1rem;
-}
-
-.summary-group {
-  margin-bottom: 20px;
-}
-
-.summary-group h4 {
-  font-size: 1rem;
-  color: #374151;
-  margin: 0 0 10px 0;
-  font-weight: 600;
-}
-
-.summary-row.highlight {
-  background: #f3f4f6;
-  padding: 8px 12px;
-  border-radius: 8px;
-  margin: 5px 0;
-  font-weight: 500;
-}
-
-.total-details {
-  text-align: right;
-  color: #6b7280;
-  font-size: 0.85rem;
-  margin-top: 4px;
-}
-
-.btn-icon {
-  margin-right: 6px;
-}
-</style>
-<style scoped>
 .profile-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -976,7 +1180,7 @@ onMounted(() => loadData())
   background: #f9fafb;
 }
 
-/* ---- Loading ---- */
+/* Loading */
 .loading-container {
   display: flex;
   flex-direction: column;
@@ -987,7 +1191,7 @@ onMounted(() => loadData())
 }
 .loading-container p { color: #6b7280; font-size: 1.1rem; }
 
-/* ---- Header ---- */
+/* Header */
 .profile-header {
   display: flex;
   justify-content: space-between;
@@ -1026,7 +1230,7 @@ onMounted(() => loadData())
 }
 .logout-btn:hover { background: #dc2626; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(239,68,68,.3); }
 
-/* ---- Layout ---- */
+/* Layout */
 .profile-content {
   display: grid;
   grid-template-columns: 250px 1fr;
@@ -1071,7 +1275,7 @@ onMounted(() => loadData())
   font-weight: 700;
 }
 
-/* ---- Tab ---- */
+/* Tab */
 .tab-content {
   background: white;
   border-radius: 15px;
@@ -1082,7 +1286,7 @@ onMounted(() => loadData())
 .tab-header h2 { font-size: 1.8rem; color: #1f2937; margin: 0 0 8px; }
 .tab-header p  { color: #6b7280; margin: 0; }
 
-/* ---- Forms ---- */
+/* Forms */
 .form-section { margin-bottom: 35px; }
 .form-section h3 {
   font-size: 1.3rem;
@@ -1123,7 +1327,7 @@ onMounted(() => loadData())
 .field-help     { font-size: .85rem; color: #6b7280; margin: 6px 0 0; }
 .error-message  { color: #ef4444; font-size: .875rem; margin: 6px 0 0; font-weight: 500; }
 
-/* ---- Adresses pro ---- */
+/* Adresses pro */
 .address-display-card {
   padding: 20px;
   background: #f9fafb;
@@ -1136,7 +1340,7 @@ onMounted(() => loadData())
 .address-text { color: #4b5563; line-height: 1.6; margin: 0; }
 .no-address   { color: #9ca3af; font-style: italic; margin: 0; }
 
-/* ---- Password ---- */
+/* Password */
 .password-input { position: relative; }
 .password-toggle {
   position: absolute;
@@ -1163,7 +1367,127 @@ onMounted(() => loadData())
 .password-requirements li { padding: 5px 0; color: #6b7280; font-size: .9rem; }
 .password-requirements li.valid { color: #10b981; font-weight: 600; }
 
-/* ---- Commandes ---- */
+/* Security stats */
+.security-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+}
+.stat-icon { font-size: 2rem; }
+.stat-info { flex: 1; }
+.stat-value { font-size: 1.1rem; font-weight: 700; color: #1f2937; }
+.stat-label { font-size: 0.85rem; color: #6b7280; margin-top: 4px; }
+
+/* Danger zone */
+.danger-zone { margin-top: 40px; padding-top: 30px; border-top: 2px solid #fee2e2; }
+.danger-zone h3 { color: #dc2626; font-size: 1.2rem; margin: 0 0 20px 0; }
+.danger-card {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  background: #fef2f2;
+  border-radius: 12px;
+  border: 2px solid #fecaca;
+}
+.danger-icon { font-size: 2rem; }
+.danger-content { flex: 1; }
+.danger-content h4 { color: #dc2626; margin: 0 0 8px 0; }
+.danger-content p { color: #6b7280; margin: 0 0 15px 0; }
+.delete-account-btn {
+  padding: 10px 20px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .3s;
+}
+.delete-account-btn:hover { background: #b91c1c; transform: translateY(-2px); }
+
+/* Notifications */
+.checkbox-group { display: flex; flex-direction: column; gap: 15px; }
+.checkbox-item {
+  display: flex;
+  gap: 15px;
+  padding: 15px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all .3s;
+}
+.checkbox-item:hover { background: #f9fafb; border-color: #667eea; }
+.checkbox-input { width: 20px; height: 20px; cursor: pointer; flex-shrink: 0; margin-top: 2px; }
+.checkbox-label { flex: 1; }
+.checkbox-title       { display: block; font-weight: 600; color: #1f2937; margin-bottom: 4px; }
+.checkbox-description { display: block; font-size: .9rem; color: #6b7280; }
+
+/* Radio group */
+.radio-group { display: flex; flex-direction: column; gap: 15px; }
+.radio-item {
+  display: flex;
+  gap: 15px;
+  padding: 15px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all .3s;
+}
+.radio-item:hover { background: #f9fafb; border-color: #667eea; }
+.radio-input { width: 20px; height: 20px; cursor: pointer; flex-shrink: 0; margin-top: 2px; }
+.radio-label { flex: 1; }
+.radio-title       { display: block; font-weight: 600; color: #1f2937; margin-bottom: 4px; }
+.radio-description { display: block; font-size: .9rem; color: #6b7280; }
+
+/* Buttons */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 30px;
+  padding-top: 30px;
+  border-top: 2px solid #f3f4f6;
+}
+.cancel-btn {
+  padding: 12px 24px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .3s;
+}
+.cancel-btn:hover { background: #e5e7eb; }
+
+.save-btn {
+  padding: 12px 30px;
+  background: linear-gradient(135deg,#10b981,#34d399);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .3s;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.save-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16,185,129,.3); }
+.save-btn:disabled { opacity: .7; cursor: not-allowed; transform: none; }
+
+/* Commandes */
 .loading-small {
   display: flex;
   flex-direction: column;
@@ -1238,7 +1562,6 @@ onMounted(() => loadData())
   border-radius: 10px;
 }
 
-/* Wrapper image pour éviter que l'image ne se déforme */
 .item-image-wrapper {
   width: 60px;
   height: 60px;
@@ -1256,7 +1579,6 @@ onMounted(() => loadData())
   object-fit: cover;
   display: block;
 }
-/* Quand c'est le SVG fallback (data:image) on utilise contain */
 .item-image[src^="data:image/svg"] {
   object-fit: contain;
   padding: 6px;
@@ -1264,31 +1586,63 @@ onMounted(() => loadData())
 
 .item-info { flex: 1; }
 .item-info h5 { font-size: 1rem; color: #1f2937; margin: 0 0 5px; }
-.item-info p  { font-size: .9rem; color: #6b7280; margin: 0; }
-.item-subtotal { font-weight: 700; color: #10b981; font-size: 1rem; white-space: nowrap; }
+.item-details {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.item-quantity, .item-duration {
+  background: #f3f4f6;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+}
+.item-taxes {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+.item-pricing { text-align: right; }
+.item-subtotal-ht { font-size: 0.9rem; color: #6b7280; }
+.item-subtotal-ttc { font-weight: 700; color: #10b981; font-size: 1rem; }
 
-/* Récapitulatif */
 .order-summary {
   padding: 20px;
   background: #f9fafb;
   border-radius: 10px;
 }
+.summary-group { margin-bottom: 20px; }
+.summary-group h4 { font-size: 1rem; color: #374151; margin: 0 0 10px 0; font-weight: 600; }
 .summary-row {
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
   font-size: .95rem;
 }
+.summary-row.highlight {
+  background: #f3f4f6;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin: 5px 0;
+  font-weight: 500;
+}
 .summary-row.discount { color: #10b981; font-weight: 600; }
-.summary-row.total {
-  padding-top: 15px;
-  border-top: 2px solid #e5e7eb;
-  margin-top: 5px;
+.summary-divider { height: 1px; background: #e5e7eb; margin: 6px 0; }
+.summary-total { margin-top: 15px; }
+.total-row {
+  display: flex;
+  justify-content: space-between;
   font-size: 1.1rem;
   font-weight: 700;
 }
-.summary-divider { height: 1px; background: #e5e7eb; margin: 6px 0; }
 .total-price { color: #10b981; font-size: 1.3rem; }
+.total-details {
+  text-align: right;
+  color: #6b7280;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
 
 .order-actions {
   display: flex;
@@ -1310,63 +1664,9 @@ onMounted(() => loadData())
 .view-btn:hover   { background: #5568d3; transform: translateY(-2px); }
 .cancel-order-btn       { background: #fee2e2; color: #991b1b; }
 .cancel-order-btn:hover { background: #fecaca; }
+.btn-icon { margin-right: 6px; }
 
-/* ---- Notifications ---- */
-.checkbox-group { display: flex; flex-direction: column; gap: 15px; }
-.checkbox-item {
-  display: flex;
-  gap: 15px;
-  padding: 15px;
-  border: 2px solid #e5e7eb;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all .3s;
-}
-.checkbox-item:hover { background: #f9fafb; border-color: #667eea; }
-.checkbox-input { width: 20px; height: 20px; cursor: pointer; flex-shrink: 0; margin-top: 2px; }
-.checkbox-label { flex: 1; }
-.checkbox-title       { display: block; font-weight: 600; color: #1f2937; margin-bottom: 4px; }
-.checkbox-description { display: block; font-size: .9rem; color: #6b7280; }
-
-/* ---- Buttons ---- */
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 15px;
-  margin-top: 30px;
-  padding-top: 30px;
-  border-top: 2px solid #f3f4f6;
-}
-.cancel-btn {
-  padding: 12px 24px;
-  background: #f3f4f6;
-  color: #374151;
-  border: 2px solid #e5e7eb;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all .3s;
-}
-.cancel-btn:hover { background: #e5e7eb; }
-
-.save-btn {
-  padding: 12px 30px;
-  background: linear-gradient(135deg,#10b981,#34d399);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all .3s;
-  min-width: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.save-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16,185,129,.3); }
-.save-btn:disabled { opacity: .7; cursor: not-allowed; transform: none; }
-
-/* ---- Spinner ---- */
+/* Spinner */
 .loading-spinner {
   width: 20px;
   height: 20px;
@@ -1377,7 +1677,7 @@ onMounted(() => loadData())
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ---- Alerts ---- */
+/* Alerts */
 .alert {
   position: fixed;
   top: 20px;
@@ -1416,13 +1716,14 @@ onMounted(() => loadData())
 .alert-slide-enter-from,
 .alert-slide-leave-to      { transform: translateX(100%); opacity: 0; }
 
-/* ---- Responsive ---- */
+/* Responsive */
 @media (max-width: 992px) {
   .profile-content { grid-template-columns: 1fr; }
   .profile-sidebar { position: static; }
   .profile-menu { flex-direction: row; overflow-x: auto; padding-bottom: 10px; }
   .menu-item    { white-space: nowrap; flex-shrink: 0; }
   .form-grid    { grid-template-columns: 1fr; }
+  .security-stats { grid-template-columns: 1fr; }
 }
 @media (max-width: 768px) {
   .profile-header { flex-direction: column; gap: 20px; }
@@ -1434,6 +1735,7 @@ onMounted(() => loadData())
   .order-status { align-self: flex-start; }
   .order-actions { flex-direction: column; }
   .view-btn, .cancel-order-btn { width: 100%; }
+  .danger-card { flex-direction: column; text-align: center; }
   .alert { left: 10px; right: 10px; max-width: none; }
 }
 </style>

@@ -29,8 +29,8 @@
               <div class="option-content">
                 <span class="option-icon">🏪</span>
                 <div class="option-text">
-                  <h3>Sur place</h3>
-                  <p>Retirez votre commande directement dans notre magasin</p>
+                  <h3>Retrait sur place</h3>
+                  <p>Vous récupérez votre commande directement dans notre magasin</p>
                   <span class="option-price">Gratuit</span>
                 </div>
               </div>
@@ -85,26 +85,26 @@
                 <div class="distance-input-group">
                   <input 
                     type="number" 
-                    v-model.number="form.distance_livraison"
+                    v-model.number="form.distance"
                     placeholder="Distance en kilomètres"
                     min="0"
                     max="50"
                     step="0.1"
                     class="distance-input"
-                    @input="calculerFraisLivraison"
+                    @input="calculerFrais"
                   >
                   <span class="distance-unit">km</span>
                 </div>
                 <p class="field-help">
-                  Distance entre notre magasin et votre adresse de livraison
+                  Distance entre notre magasin et votre adresse
                 </p>
-                <div class="distance-info" v-if="form.distance_livraison > 50">
+                <div class="distance-info" v-if="form.distance > 50">
                   ⚠️ Distance maximale autorisée : 50 km
                 </div>
               </div>
 
-              <!-- Tarif calculé -->
-              <div v-if="form.jour_livraison && form.distance_livraison > 0" class="tarif-preview">
+              <!-- Tarif calculé pour livraison -->
+              <div v-if="form.jour_livraison && form.distance > 0" class="tarif-preview">
                 <div class="tarif-header">
                   <span class="tarif-icon">💰</span>
                   <span class="tarif-label">Tarif de livraison :</span>
@@ -116,7 +116,7 @@
                   </div>
                   <div class="tarif-row">
                     <span>Distance :</span>
-                    <span>{{ form.distance_livraison }} km</span>
+                    <span>{{ form.distance }} km</span>
                   </div>
                   <div class="tarif-total">
                     <span>Total livraison :</span>
@@ -184,29 +184,21 @@
                     <div class="radio-circle" :class="{ 'selected': form.adresse_livraison_index === index }"></div>
                   </div>
                   <div class="address-content">
-                    <!-- Nom de la société en gras -->
                     <div class="address-company">
                       <span class="company-icon">🏢</span>
                       <strong>{{ adresse.nom_societe }}</strong>
                     </div>
-                    
-                    <!-- Adresse complète -->
                     <div class="address-line">{{ adresse.adresse }}</div>
-                    
-                    <!-- Type d'adresse -->
                     <div class="address-type">
                       <span class="type-icon">{{ adresse.type === 'Livraison par défaut' ? '📦' : '🏛️' }}</span>
                       {{ adresse.type }}
                     </div>
                   </div>
-                  
-                  <!-- Badge -->
                   <span v-if="adresse.est_principale" class="badge-primary">Principale</span>
                   <span v-else class="badge-secondary">{{ adresse.type }}</span>
                 </div>
               </div>
               
-              <!-- Message si aucune adresse -->
               <div v-else class="address-missing warning">
                 <span class="missing-icon">🏢</span>
                 <div class="missing-text">
@@ -230,7 +222,7 @@
           
           <div class="dates-grid">
             <div class="form-group">
-              <label>Date de début</label>
+              <label>Date de début (retrait)</label>
               <input 
                 type="date" 
                 v-model="form.date_debut"
@@ -241,7 +233,7 @@
             </div>
             
             <div class="form-group">
-              <label>Date de fin</label>
+              <label>Date de fin (retour)</label>
               <input 
                 type="date" 
                 v-model="form.date_fin"
@@ -262,11 +254,12 @@
           </div>
         </div>
 
-        <!-- Mode de retour -->
+        <!-- Mode de retour (avec calcul basé sur le jour de fin) -->
         <div class="form-section">
           <div class="section-header">
             <span class="section-icon">🔄</span>
             <h2>Mode de retour</h2>
+            <p class="section-subtitle">Le jour de retour correspond à la date de fin de location</p>
           </div>
           
           <div class="options-grid">
@@ -297,116 +290,65 @@
                 <div class="radio-circle" :class="{ 'selected': form.mode_retour === 2 }"></div>
               </div>
               <div class="option-content">
-                <span class="option-icon">📦</span>
+                <span class="option-icon">🏠</span>
                 <div class="option-text">
-                  <h3>Retour par transporteur</h3>
-                  <p>Nous venons récupérer le matériel</p>
-                  <span class="option-price">{{ fraisRetour > 0 ? formatPrice(fraisRetour) : 'Gratuit' }}</span>
+                  <h3>Retour à domicile</h3>
+                  <p>Nous venons récupérer le matériel à votre adresse</p>
+                  <span class="option-price">{{ fraisRetour > 0 ? formatPrice(fraisRetour) : 'Calcul...' }}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Détails retour (si mode retour) -->
-          <div v-if="form.mode_retour === 2" class="delivery-details-section">
-            <h3>Détails du retour</h3>
-            
-            <div class="delivery-form">
-              <!-- Type de jour -->
-              <div class="form-group">
-                <label>📅 Jour de retour</label>
-                <div class="day-selector">
-                  <button 
-                    v-for="day in joursRetour" 
-                    :key="day.value"
-                    class="day-btn"
-                    :class="{ 'active': form.jour_retour === day.value }"
-                    @click="selectJourRetour(day.value)"
-                  >
-                    {{ day.label }}
-                  </button>
-                </div>
-              </div>
-
-              <!-- Distance (km) -->
-              <div class="form-group">
-                <label>📍 Distance (km)</label>
-                <div class="distance-input-group">
-                  <input 
-                    type="number" 
-                    v-model.number="form.distance_retour"
-                    placeholder="Distance en kilomètres"
-                    min="0"
-                    max="50"
-                    step="0.1"
-                    class="distance-input"
-                    @input="calculerFraisRetour"
-                  >
-                  <span class="distance-unit">km</span>
-                </div>
-              </div>
-
-              <!-- Tarif calculé -->
-              <div class="tarif-preview" v-if="form.jour_retour && form.distance_retour > 0">
-                <div class="tarif-header">
-                  <span class="tarif-icon">💰</span>
-                  <span class="tarif-label">Tarif de retour :</span>
-                </div>
-                <div class="tarif-details">
-                  <div class="tarif-row">
-                    <span>{{ getJourLabel(form.jour_retour) }} :</span>
-                    <span>{{ getTarifKm(form.jour_retour) }} €/km</span>
-                  </div>
-                  <div class="tarif-row">
-                    <span>Distance :</span>
-                    <span>{{ form.distance_retour }} km</span>
-                  </div>
-                  <div class="tarif-total">
-                    <span>Total :</span>
-                    <span class="tarif-montant">{{ formatPrice(fraisRetour) }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Code de réduction -->
-        <div class="form-section">
-          <div class="section-header">
-            <span class="section-icon">🎫</span>
-            <h2>Codes de réduction disponibles</h2>
-          </div>
-          
-          <div class="promo-container">
-            <div class="promo-grid">
-              <div 
-                v-for="code in availableCodes" 
-                :key="code.id"
-                class="promo-badge"
-                :class="{ 'active': promoCode === code.code, 'applied': appliedPromo && appliedPromo.code === code.code }"
-                @click="selectAndApply(code.code)"
-              >
-                <span class="badge-code">{{ code.code }}</span>
-                <span class="badge-desc">
-                  -{{ code.montant }}{{ code.type_reduction_id == 2 ? '%' : '€' }}
-                </span>
+          <!-- Détails retour (si mode retour à domicile) -->
+          <div v-if="form.mode_retour === 2" class="delivery-details-section retour-details">
+            <div class="info-box">
+              <span class="info-icon">ℹ️</span>
+              <div class="info-content">
+                <strong>Informations de retour</strong>
+                <p>
+                  La récupération du matériel se fera à la même adresse que la livraison.
+                </p>
+                <p v-if="form.mode_livraison === 2 && form.date_fin">
+                  📍 Adresse de retour : {{ getAdresseRetour() }}
+                </p>
+                <p v-if="form.mode_livraison === 1" class="warning-text">
+                  ⚠️ Pour un retour à domicile, veuillez sélectionner "Livraison à domicile" ci-dessus.
+                </p>
               </div>
             </div>
 
-            <div v-if="appliedPromo" class="promo-applied mt-3">
-              <span class="applied-icon">✅</span>
-              <span class="applied-text">Réduction "{{ appliedPromo.code }}" appliquée (-{{ formatPrice(appliedPromo.remise) }})</span>
-              <button @click="removePromoCode" class="btn-remove-promo">Retirer</button>
+            <!-- Aperçu des frais de retour basés sur la date de fin -->
+            <div v-if="form.date_fin && form.distance > 0" class="tarif-preview">
+              <div class="tarif-header">
+                <span class="tarif-icon">💰</span>
+                <span class="tarif-label">Tarif de retour :</span>
+              </div>
+              <div class="tarif-details">
+                <div class="tarif-row">
+                  <span>Date de fin :</span>
+                  <span>{{ formatDate(form.date_fin) }} ({{ getJourRetourLabel() }})</span>
+                </div>
+                <div class="tarif-row">
+                  <span>Tarif appliqué :</span>
+                  <span class="tarif-rate">{{ getTarifRetour() }} €/km</span>
+                </div>
+                <div class="tarif-row">
+                  <span>Distance :</span>
+                  <span>{{ form.distance }} km</span>
+                </div>
+                <div class="tarif-total">
+                  <span>Total retour :</span>
+                  <span class="tarif-montant">{{ formatPrice(fraisRetour) }}</span>
+                </div>
+              </div>
             </div>
 
-            <div v-if="promoError" class="promo-error mt-2">
-              <span>⚠️ {{ promoError }}</span>
+            <!-- Message si informations manquantes -->
+            <div v-else class="tarif-placeholder">
+              <span class="placeholder-icon">📊</span>
+              <span>Sélectionnez une date de fin et une distance pour calculer les frais de retour</span>
             </div>
-            
-            <p v-if="!appliedPromo" class="no-promo-hint">
-              Aucun code sélectionné. Vous pouvez continuer votre commande normalement.
-            </p>
           </div>
         </div>
 
@@ -471,7 +413,7 @@
               <span class="price-label">
                 Frais de livraison
                 <span class="price-info" v-if="form.mode_livraison === 2">
-                  ({{ getJourLabel(form.jour_livraison) }} - {{ form.distance_livraison || 0 }} km)
+                  ({{ getJourLabel(form.jour_livraison) }} - {{ form.distance || 0 }} km)
                 </span>
               </span>
               <span class="price-value">
@@ -483,7 +425,7 @@
               <span class="price-label">
                 Frais de retour
                 <span class="price-info" v-if="form.mode_retour === 2">
-                  ({{ getJourLabel(form.jour_retour) }} - {{ form.distance_retour || 0 }} km)
+                  ({{ getJourRetourLabel() }} - {{ form.distance || 0 }} km)
                 </span>
               </span>
               <span class="price-value">
@@ -541,35 +483,30 @@
     </div>
 
     <!-- Message de succès -->
- <!-- Message de succès -->
-<div v-if="orderSuccess" class="success-overlay">
-  <div class="success-modal">
-    <div class="success-icon">🎉</div>
-    <h2>Commande confirmée !</h2>
-    <p>Votre commande n°{{ orderNumber }} a été enregistrée avec succès.</p>
-    
-    <!-- Afficher l'ID pour déboguer (optionnel) -->
-    <p v-if="orderId" class="debug-info">ID: {{ orderId }}</p>
-    
-    <div class="success-actions">
-      <!-- ✅ Chemin corrigé : /commandes/${orderId} -->
-      <router-link :to="`/commandes/${orderId}`" class="btn-primary" v-if="orderId">
-        <span class="btn-icon">🔍</span>
-        Voir le détail
-      </router-link>
-      
-      <router-link to="/commandes" class="btn-secondary">
-        <span class="btn-icon">📋</span>
-        Mes commandes
-      </router-link>
-      
-      <router-link to="/catalogue" class="btn-outline">
-        <span class="btn-icon">🛍️</span>
-        Continuer mes achats
-      </router-link>
+    <div v-if="orderSuccess" class="success-overlay">
+      <div class="success-modal">
+        <div class="success-icon">🎉</div>
+        <h2>Commande confirmée !</h2>
+        <p>Votre commande n°{{ orderNumber }} a été enregistrée avec succès.</p>
+        
+        <div class="success-actions">
+          <router-link :to="`/commandes/${orderId}`" class="btn-primary" v-if="orderId">
+            <span class="btn-icon">🔍</span>
+            Voir le détail
+          </router-link>
+          
+          <router-link to="/commandes" class="btn-secondary">
+            <span class="btn-icon">📋</span>
+            Mes commandes
+          </router-link>
+          
+          <router-link to="/catalogue" class="btn-outline">
+            <span class="btn-icon">🛍️</span>
+            Continuer mes achats
+          </router-link>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
   </div>
 </template>
 
@@ -601,9 +538,7 @@ const form = reactive({
   frais_livraison: 0,
   frais_retour: 0,
   jour_livraison: null,
-  jour_retour: null,
-  distance_livraison: 0,
-  distance_retour: 0,
+  distance: 0, // Distance unique pour livraison et retour
   code_reduction: null,
   notes: '',
   adresse_livraison_index: null
@@ -623,14 +558,8 @@ const adressesProfessionnel = ref([])
 // Données du panier (depuis serveur)
 const cartItems = ref([])
 
-// Codes promo disponibles
-const availableCodes = ref([])
-
 // Code promo
-const promoCode = ref('')
-//const applyingPromo = ref(false)
 const appliedPromo = ref(null)
-const promoError = ref('')
 
 // État de la commande
 const submitting = ref(false)
@@ -645,11 +574,34 @@ const joursLivraison = [
   { value: 'dimanche', label: 'Dimanche', tarifKm: 1.50 }
 ]
 
-const joursRetour = [
-  { value: 'lundi_vendredi', label: 'Lundi - Vendredi', tarifKm: 1.25 },
-  { value: 'samedi', label: 'Samedi', tarifKm: 1.00 },
-  { value: 'dimanche', label: 'Dimanche', tarifKm: 1.50 }
-]
+// Configuration des jours pour le retour basée sur le jour de la semaine
+const getJourRetourFromDate = (date) => {
+  if (!date) return null
+  const dateObj = new Date(date)
+  const jourSemaine = dateObj.getDay() // 0 = dimanche, 1 = lundi, ..., 6 = samedi
+  
+  if (jourSemaine === 0) return 'dimanche'
+  if (jourSemaine === 6) return 'samedi'
+  return 'lundi_vendredi'
+}
+
+const getTarifRetour = () => {
+  if (!form.date_fin) return 0
+  const jourRetour = getJourRetourFromDate(form.date_fin)
+  if (jourRetour === 'lundi_vendredi') return 1.25
+  if (jourRetour === 'samedi') return 1.00
+  if (jourRetour === 'dimanche') return 1.50
+  return 0
+}
+
+const getJourRetourLabel = () => {
+  if (!form.date_fin) return 'Non définie'
+  const jourRetour = getJourRetourFromDate(form.date_fin)
+  if (jourRetour === 'lundi_vendredi') return 'Lundi - Vendredi'
+  if (jourRetour === 'samedi') return 'Samedi'
+  if (jourRetour === 'dimanche') return 'Dimanche'
+  return 'Non définie'
+}
 
 // Computed
 const isProfessional = computed(() => userType.value === 'professionnel')
@@ -680,22 +632,20 @@ const subtotalTTC = computed(() => {
 
 const fraisLivraison = computed(() => {
   if (form.mode_livraison === 1) return 0
-  if (!form.jour_livraison || !form.distance_livraison) return 0
+  if (!form.jour_livraison || !form.distance) return 0
   
   const jour = joursLivraison.find(j => j.value === form.jour_livraison)
   if (!jour) return 0
   
-  return jour.tarifKm * form.distance_livraison
+  return jour.tarifKm * form.distance
 })
 
 const fraisRetour = computed(() => {
   if (form.mode_retour === 1) return 0
-  if (!form.jour_retour || !form.distance_retour) return 0
+  if (!form.date_fin || !form.distance) return 0
   
-  const jour = joursRetour.find(j => j.value === form.jour_retour)
-  if (!jour) return 0
-  
-  return jour.tarifKm * form.distance_retour
+  const tarifRetour = getTarifRetour()
+  return tarifRetour * form.distance
 })
 
 const remise = computed(() => {
@@ -714,8 +664,8 @@ const canSubmit = computed(() => {
   
   if (form.mode_livraison === 2) {
     if (!form.jour_livraison) return false
-    if (!form.distance_livraison || form.distance_livraison <= 0) return false
-    if (form.distance_livraison > 50) return false
+    if (!form.distance || form.distance <= 0) return false
+    if (form.distance > 50) return false
     
     if (isProfessional.value) {
       if (form.adresse_livraison_index === null) return false
@@ -724,31 +674,52 @@ const canSubmit = computed(() => {
     }
   }
   
+  // Pour le retour à domicile, on a besoin de la distance (déjà définie) et de la date de fin
   if (form.mode_retour === 2) {
-    if (!form.jour_retour) return false
-    if (!form.distance_retour || form.distance_retour <= 0) return false
-    if (form.distance_retour > 50) return false
+    if (!form.date_fin) return false
+    if (!form.distance || form.distance <= 0) return false
+    if (form.distance > 50) return false
   }
   
   return true
 })
 
 // Méthodes
+const getAdresseRetour = () => {
+  if (form.mode_livraison === 2) {
+    if (isProfessional.value && adressesProfessionnel.value[form.adresse_livraison_index]) {
+      return adressesProfessionnel.value[form.adresse_livraison_index].adresse
+    } else if (userAdresse.value) {
+      return userAdresse.value
+    }
+  }
+  return 'Adresse de retrait en magasin'
+}
+
 const getJourLabel = (value) => {
-  const jour = [...joursLivraison, ...joursRetour].find(j => j.value === value)
+  const jour = joursLivraison.find(j => j.value === value)
   return jour ? jour.label : value
 }
 
 const getTarifKm = (value) => {
-  const jour = [...joursLivraison, ...joursRetour].find(j => j.value === value)
+  const jour = joursLivraison.find(j => j.value === value)
   return jour ? jour.tarifKm : 0
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  return new Date(dateString).toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  })
 }
 
 const selectLivraison = (mode) => {
   form.mode_livraison = mode
   if (mode === 1) {
     form.jour_livraison = null
-    form.distance_livraison = 0
+    form.distance = 0
     form.adresse_livraison_id = null
     form.adresse_livraison_texte = ''
   }
@@ -756,18 +727,11 @@ const selectLivraison = (mode) => {
 
 const selectRetour = (mode) => {
   form.mode_retour = mode
-  if (mode === 1) {
-    form.jour_retour = null
-    form.distance_retour = 0
-  }
 }
 
 const selectJourLivraison = (jour) => {
   form.jour_livraison = jour
-}
-
-const selectJourRetour = (jour) => {
-  form.jour_retour = jour
+  calculerFrais()
 }
 
 const selectAdresseProfessionnel = (index) => {
@@ -777,18 +741,16 @@ const selectAdresseProfessionnel = (index) => {
   form.adresse_livraison_texte = adresse.adresse_complete
 }
 
-const calculerFraisLivraison = () => {
+const calculerFrais = () => {
+  // La distance est la même pour livraison et retour
+  // Les frais sont recalculés automatiquement via les computed
   form.frais_livraison = fraisLivraison.value
-}
-
-const calculerFraisRetour = () => {
   form.frais_retour = fraisRetour.value
 }
 
 // Charger le panier depuis l'API
 const loadCart = async () => {
   if (!isAuthenticated.value) {
-    // Rediriger vers login
     router.push('/login?redirect=/checkout')
     return
   }
@@ -808,7 +770,6 @@ const loadCart = async () => {
     }
   } catch (error) {
     console.error('Erreur chargement panier:', error)
-    // Rediriger vers panier si vide
     router.push('/panier')
   } finally {
     loading.value.cart = false
@@ -816,12 +777,10 @@ const loadCart = async () => {
 }
 
 // Charger les informations utilisateur
-// Charger les informations utilisateur
 const loadUserInfo = async () => {
   loading.value.user = true
   try {
     const response = await api.get('/user')
-    console.log('✅ Réponse API /user:', response.data) // AJOUTER
     
     if (response.data?.success && response.data?.data) {
       const userData = response.data.data
@@ -857,83 +816,15 @@ const loadUserInfo = async () => {
       }
     }
   } catch (error) {
-    // 🔥 AFFICHER LE MESSAGE D'ERREUR COMPLET
     console.error('❌ Erreur chargement utilisateur:', error)
-    console.error('📋 Statut:', error.response?.status)
-    console.error('📋 Données:', error.response?.data)  // ← CECI EST CRUCIAL
-    console.error('📋 Message serveur:', error.response?.data?.message)
-    console.error('📋 Erreur technique:', error.response?.data?.error)
-    
-    // Afficher une alerte avec le message d'erreur
     if (error.response?.data?.message) {
       alert(`Erreur serveur: ${error.response.data.message}`)
-    } else if (error.response?.data?.error) {
-      alert(`Erreur technique: ${error.response.data.error}`)
     }
   } finally {
     loading.value.user = false
   }
 }
-// Charger les codes promo disponibles
-const loadAvailableCodes = async () => {
-  loading.value.codes = true
-  try {
-    // Endpoint à créer si nécessaire, ici on simule quelques codes
-    // À remplacer par un vrai appel API
-    // const response = await api.get('/codes-promo')
-    // availableCodes.value = response.data.data
-    availableCodes.value = [
-      { id: 1, code: 'PROMO10', montant: 10, type_reduction_id: 2 }, // 10%
-      { id: 2, code: 'BIENVENUE5', montant: 5, type_reduction_id: 1 }, // 5€
-      { id: 3, code: 'ETE2025', montant: 15, type_reduction_id: 2 }, // 15%
-    ]
-  } catch (error) {
-    console.error('Erreur chargement codes promo:', error)
-  } finally {
-    loading.value.codes = false
-  }
-}
 
-// Appliquer code promo
-/* const applyPromoCode = async (code) => {
-  if (!code) return
-  
-  applyingPromo.value = true
-  promoError.value = ''
-  
-  try {
-    const response = await api.post('/commandes/verifier-code', {
-      code: code,
-      sous_total: subtotalTTC.value
-    })
-    
-    if (response.data.success) {
-      appliedPromo.value = response.data.data
-      promoCode.value = code
-      form.code_reduction = code
-    }
-  } catch (error) {
-    promoError.value = error.response?.data?.message || 'Code promo invalide'
-  } finally {
-    applyingPromo.value = false
-  }
-} */
-
-// Sélectionner un code depuis la grille
-const selectAndApply = (code) => {
-  if (appliedPromo && appliedPromo.code === code) return
-  applyPromoCode(code)
-}
-
-// Retirer code promo
-const removePromoCode = () => {
-  appliedPromo.value = null
-  promoError.value = ''
-  promoCode.value = ''
-  form.code_reduction = null
-}
-
-// Soumettre la commande
 // Soumettre la commande
 const submitOrder = async () => {
   if (!canSubmit.value) return
@@ -953,21 +844,27 @@ const submitOrder = async () => {
       mode_livraison: form.mode_livraison,
       mode_retour: form.mode_retour,
       frais_livraison: fraisLivraison.value,
+      frais_retour: fraisRetour.value,
       items
     }
     
     if (form.mode_livraison === 2) {
       commandeData.jour_livraison = form.jour_livraison
-      commandeData.distance_livraison = form.distance_livraison
+      commandeData.distance_livraison = form.distance
       if (isProfessional.value) {
         commandeData.adresse_livraison_id = form.adresse_livraison_id
       }
     }
     
+    // Pour le retour, on utilise la même distance et le jour basé sur la date de fin
     if (form.mode_retour === 2) {
-      commandeData.jour_retour = form.jour_retour
-      commandeData.distance_retour = form.distance_retour
-      commandeData.frais_retour = fraisRetour.value
+      const jourRetour = getJourRetourFromDate(form.date_fin)
+      commandeData.jour_retour = jourRetour
+      commandeData.distance_retour = form.distance
+      // Réutiliser la même adresse que la livraison
+      if (form.mode_livraison === 2 && form.adresse_livraison_id) {
+        commandeData.adresse_retour_id = form.adresse_livraison_id
+      }
     }
     
     if (form.code_reduction) {
@@ -978,31 +875,21 @@ const submitOrder = async () => {
       commandeData.notes = form.notes
     }
     
-    console.log('📤 Données envoyées:', commandeData) // AJOUTER
+    console.log('📤 Données envoyées:', commandeData)
     
     const response = await api.post('/commandes', commandeData)
     
-   if (response.data.success) {
-  // Vider le panier après commande
-  await api.delete('/panier')
-  window.dispatchEvent(new CustomEvent('cartUpdated'))
-  
-  orderNumber.value = response.data.data.numero_commande
-  orderId.value = response.data.data.id  // ✅ STOCKER L'ID
-  orderSuccess.value = true
-  
- 
-}
+    if (response.data.success) {
+      await api.delete('/panier')
+      window.dispatchEvent(new CustomEvent('cartUpdated'))
+      
+      orderNumber.value = response.data.data.numero_commande
+      orderId.value = response.data.data.id
+      orderSuccess.value = true
+    }
   } catch (error) {
-    // 🔥 AFFICHER TOUS LES DÉTAILS
     console.error('❌ Erreur commande:', error)
-    console.error('📋 Statut:', error.response?.status)
-    console.error('📋 Données complètes:', error.response?.data)
-    console.error('📋 Message serveur:', error.response?.data?.message)
-    console.error('📋 Erreur technique:', error.response?.data?.error)
-    console.error('📋 Validation errors:', error.response?.data?.errors)
     
-    // Afficher une alerte avec le message
     if (error.response?.data?.message) {
       alert(`Erreur: ${error.response.data.message}`)
     } else if (error.response?.data?.error) {
@@ -1032,7 +919,6 @@ onMounted(() => {
   }
   loadCart()
   loadUserInfo()
-  loadAvailableCodes()
   
   const today = new Date()
   const tomorrow = new Date(today)
@@ -1044,6 +930,173 @@ onMounted(() => {
   form.date_fin = nextWeek.toISOString().split('T')[0]
 })
 </script>
+
+<style scoped>
+/* Styles existants - ajoutez ces nouveaux styles */
+
+.section-subtitle {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-left: 10px;
+  font-weight: normal;
+}
+
+.retour-details {
+  margin-top: 15px;
+}
+
+.info-box {
+  display: flex;
+  gap: 12px;
+  padding: 15px;
+  background: #f0f9ff;
+  border-radius: 10px;
+  border-left: 4px solid #3b82f6;
+  margin-bottom: 15px;
+}
+
+.info-icon {
+  font-size: 1.2rem;
+}
+
+.info-content {
+  flex: 1;
+}
+
+.info-content strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #1e40af;
+}
+
+.info-content p {
+  margin: 5px 0;
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
+.info-content .warning-text {
+  color: #d97706;
+  margin-top: 8px;
+}
+
+/* ... reste des styles existants ... */
+</style>
+
+<style scoped>
+/* Styles existants - ajoutez ces nouveaux styles */
+.section-subtitle {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-left: 10px;
+  font-weight: normal;
+}
+
+.retour-details {
+  margin-top: 15px;
+}
+
+.info-box {
+  display: flex;
+  gap: 12px;
+  padding: 15px;
+  background: #f0f9ff;
+  border-radius: 10px;
+  border-left: 4px solid #3b82f6;
+  margin-bottom: 15px;
+}
+
+.info-icon {
+  font-size: 1.2rem;
+}
+
+.info-content {
+  flex: 1;
+}
+
+.info-content strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #1e40af;
+}
+
+.info-content p {
+  margin: 5px 0;
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
+.info-content .warning-text {
+  color: #d97706;
+  margin-top: 8px;
+}
+
+.tarif-preview.free {
+  background: #f0fdf4;
+  border-left-color: #22c55e;
+}
+
+.tarif-total.free .tarif-montant {
+  color: #16a34a;
+}
+
+.section-subtitle {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-left: 10px;
+  font-weight: normal;
+}
+
+.retour-details {
+  margin-top: 15px;
+}
+
+.info-box {
+  display: flex;
+  gap: 12px;
+  padding: 15px;
+  background: #f0f9ff;
+  border-radius: 10px;
+  border-left: 4px solid #3b82f6;
+  margin-bottom: 15px;
+}
+
+.info-icon {
+  font-size: 1.2rem;
+}
+
+.info-content {
+  flex: 1;
+}
+
+.info-content strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #1e40af;
+}
+
+.info-content p {
+  margin: 5px 0;
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
+.info-content .warning-text {
+  color: #d97706;
+  margin-top: 8px;
+}
+
+.tarif-preview.free {
+  background: #f0fdf4;
+  border-left-color: #22c55e;
+}
+
+.tarif-total.free .tarif-montant {
+  color: #16a34a;
+}
+
+/* ... reste des styles existants ... */
+</style>
 
 <style scoped>
 /* Vos styles existants, avec ajouts pour les codes promo */

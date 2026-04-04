@@ -135,7 +135,7 @@
       <div class="welcome-card">
         <div class="welcome-icon">🎉</div>
         <div class="welcome-content">
-          <h3 class="welcome-title">Bienvenue {{ userDisplayName }} !</h3>
+          <h3 class="welcome-title">Bienvenue {{ userName }} !</h3>
           <p class="welcome-message">
             Vous êtes connecté en tant que {{ userTypeText }}. 
             <router-link to="/catalogue" class="welcome-link">
