@@ -13,9 +13,6 @@ use Illuminate\Support\Facades\Validator;
 
 class AdminDashboardController extends Controller
 {
-    /**
-     * Statistiques rapides (calculées en direct depuis la base)
-     */
     public function stats()
     {
         try {
@@ -33,9 +30,6 @@ class AdminDashboardController extends Controller
         }
     }
 
-    /**
-     * Liste des matériels avec filtres et pagination
-     */
     public function index(Request $request)
     {
         try {
@@ -74,9 +68,6 @@ class AdminDashboardController extends Controller
         }
     }
 
-    /**
-     * Créer un nouveau matériel
-     */
     public function store(Request $request)
     {
         try {
@@ -109,9 +100,6 @@ class AdminDashboardController extends Controller
         }
     }
 
-    /**
-     * Mettre à jour un matériel
-     */
     public function update(Request $request, $id)
     {
         try {
@@ -150,9 +138,6 @@ class AdminDashboardController extends Controller
         }
     }
 
-    /**
-     * Supprimer un matériel (et ses photos)
-     */
     public function destroy($id)
     {
         try {
@@ -181,31 +166,6 @@ class AdminDashboardController extends Controller
         }
     }
 
-    /**
-     * Supprimer une seule photo d'un matériel
-     */
-    public function supprimerPhoto($id, $photoId)
-    {
-        try {
-            $photo = PhotoMateriel::where('materiel_id', $id)->where('id', $photoId)->first();
-
-            if (!$photo) {
-                return response()->json(['success' => false, 'message' => 'Photo non trouvée'], 404);
-            }
-
-            $this->supprimerFichier($photo->url_photo);
-            $photo->delete();
-
-            return response()->json(['success' => true, 'message' => 'Photo supprimée']);
-
-        } catch (\Throwable $e) {
-            return $this->erreur('Erreur lors de la suppression de la photo', $e);
-        }
-    }
-
-    /**
-     * Mise à jour rapide du stock (boutons + / -)
-     */
     public function updateStock(Request $request, $id)
     {
         try {
@@ -259,16 +219,18 @@ class AdminDashboardController extends Controller
 
     private function donnees(Request $request): array
     {
-        return $request->only([
-            'nom', 'categorie_id', 'prix_journalier', 'dimensions',
-            'stock_total', 'stock_disponible', 'description',
-        ]);
+        // ⚠️ CORRECTION ICI : On mappe 'prix_journalier' du formulaire vers 'prix_journalier_ht' de la BDD
+        return [
+            'nom'                => $request->nom,
+            'categorie_id'       => $request->categorie_id,
+            'prix_journalier_ht' => $request->prix_journalier, 
+            'dimensions'         => $request->dimensions,
+            'stock_total'        => $request->stock_total,
+            'stock_disponible'   => $request->stock_disponible,
+            'description'        => $request->description,
+        ];
     }
 
-    /**
-     * Enregistre les photos envoyées. En base : toujours un chemin relatif
-     * (/storage/photos/materiels/xxx.jpg). L'URL complète est calculée à l'affichage.
-     */
     private function enregistrerPhotos(Request $request, Materiel $materiel): void
     {
         if (!$request->hasFile('photos')) {
@@ -293,19 +255,14 @@ class AdminDashboardController extends Controller
         return $materiel;
     }
 
-    /**
-     * Ajoute à chaque photo un champ url_complete utilisable directement par le front
-     */
     private function ajouterUrlsPhotos(Materiel $materiel): void
     {
         foreach ($materiel->photos as $photo) {
-            $photo->setAttribute('url_complete', $this->urlPhoto($photo->url_photo));
+            // ⚠️ CORRECTION ICI : On écrase la valeur pour que le frontend reçoive l'URL absolue
+            $photo->url_photo = $this->urlPhoto($photo->url_photo);
         }
     }
 
-    /**
-     * Transforme ce qui est stocké en base en URL absolue vers le backend
-     */
     private function urlPhoto(?string $url): ?string
     {
         if (!$url) {
@@ -318,18 +275,15 @@ class AdminDashboardController extends Controller
             $parsed = parse_url(str_starts_with($url, '//') ? 'http:' . $url : $url);
             $host   = $parsed['host'] ?? '';
 
-            // URL externe : on la garde telle quelle
             if (!in_array($host, ['localhost', '127.0.0.1'], true)) {
                 return $url;
             }
 
-            // URL locale avec un mauvais hôte/port : on reconstruit avec le bon
             $url = $parsed['path'] ?? '';
         }
 
         $path = ltrim($url, '/');
 
-        // Chemin stocké sans le préfixe storage/
         if (!str_starts_with($path, 'storage/') && Storage::disk('public')->exists($path)) {
             $path = 'storage/' . $path;
         }
@@ -337,9 +291,6 @@ class AdminDashboardController extends Controller
         return asset($path);
     }
 
-    /**
-     * Supprime le fichier physique si c'est un fichier du disque public
-     */
     private function supprimerFichier(?string $url): void
     {
         if (!$url) {

@@ -92,7 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // ── Matériels (CRUD admin) ─────────────────────────
         Route::get   ('/materiels',              [AdminDashboardController::class, 'index']);
         Route::post  ('/materiels',              [AdminDashboardController::class, 'store']);
-        Route::post  ('/materiels/{id}',         [AdminDashboardController::class, 'update']);
+        Route::match(['post', 'put'], '/materiels/{id}', [AdminDashboardController::class, 'update']);
         Route::delete('/materiels/{id}',         [AdminDashboardController::class, 'destroy']);
         Route::post  ('/materiels/{id}/stock',   [AdminDashboardController::class, 'updateStock']);
 

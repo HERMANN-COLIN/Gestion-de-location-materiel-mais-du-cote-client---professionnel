@@ -2,18 +2,10 @@
   <div class="admin-dashboard">
     <!-- Barre de navigation Admin -->
     <div class="admin-nav-tabs">
-      <router-link to="/admin/produits" class="admin-tab active">
-        📦 Produits & Stocks
-      </router-link>
-      <router-link to="/admin/commandes" class="admin-tab">
-        🛒 Commandes
-      </router-link>
-      <router-link to="/admin/statistiques" class="admin-tab">
-        📊 Statistiques
-      </router-link>
-      <router-link to="/" class="admin-tab back-to-site">
-        🏠 Retour au site
-      </router-link>
+      <router-link to="/admin/produits" class="admin-tab active">📦 Produits & Stocks</router-link>
+      <router-link to="/admin/commandes" class="admin-tab">🛒 Commandes</router-link>
+      <router-link to="/admin/statistiques" class="admin-tab">📊 Statistiques</router-link>
+      <router-link to="/" class="admin-tab back-to-site">🏠 Retour au site</router-link>
     </div>
 
     <!-- En-tête -->
@@ -22,9 +14,7 @@
         <h1>Gestion des produits</h1>
         <p>Ajoutez, modifiez ou supprimez vos matériels et gérez les stocks</p>
       </div>
-      <button @click="openForm()" class="btn-primary">
-        ➕ Ajouter un matériel
-      </button>
+      <button @click="openForm()" class="btn-primary">➕ Ajouter un matériel</button>
     </div>
 
     <!-- Statistiques rapides -->
@@ -63,9 +53,7 @@
       >
       <select v-model="filterCategorie" @change="loadMateriels" class="filter-select">
         <option value="">Toutes les catégories</option>
-        <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-          {{ cat.nom }}
-        </option>
+        <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.nom }}</option>
       </select>
       <select v-model="filterStock" @change="loadMateriels" class="filter-select">
         <option value="">Tous les stocks</option>
@@ -90,14 +78,16 @@
         <tbody>
           <tr v-for="materiel in materiels" :key="materiel.id">
             <td>
-              <img :src="getPhotoUrl(materiel)" :alt="materiel.nom" class="thumb">
+              <!-- ⚠️ CORRECTION : Ajout d'un fallback en cas d'erreur d'image -->
+              <img :src="getPhotoUrl(materiel)" :alt="materiel.nom" class="thumb" @error="handleImageError">
             </td>
             <td>
               <div class="cell-main">{{ materiel.nom }}</div>
               <div class="cell-sub">{{ materiel.dimensions }}</div>
             </td>
             <td>{{ materiel.categorie?.nom }}</td>
-            <td class="cell-price">{{ formatPrice(materiel.prix_journalier) }}</td>
+            <!-- ⚠️ CORRECTION : On utilise la colonne exacte de la BDD -->
+            <td class="cell-price">{{ formatPrice(materiel.prix_journalier_ht) }}</td>
             <td>
               <div class="stock-control">
                 <button @click="adjustStock(materiel, -1)" class="stock-btn">−</button>
@@ -145,9 +135,7 @@
               <label>Catégorie *</label>
               <select v-model="form.categorie_id" required>
                 <option value="">Sélectionner</option>
-                <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-                  {{ cat.nom }}
-                </option>
+                <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.nom }}</option>
               </select>
             </div>
             <div class="form-group">
@@ -280,7 +268,7 @@ const openForm = (materiel = null) => {
       nom: materiel.nom,
       categorie_id: materiel.categorie_id,
       description: materiel.description || '',
-      prix_journalier: materiel.prix_journalier,
+      prix_journalier: materiel.prix_journalier_ht || 0, // ⚠️ CORRECTION ICI
       dimensions: materiel.dimensions || '',
       stock_total: materiel.stock_total,
       stock_disponible: materiel.stock_disponible
@@ -324,7 +312,6 @@ const handlePhotos = (event) => {
 
 const removePhoto = (index) => {
   photosPreview.value.splice(index, 1)
-  // Simplification : on ne gère que l'ajout de nouvelles photos pour l'instant
 }
 
 const saveMateriel = async () => {
@@ -341,7 +328,6 @@ const saveMateriel = async () => {
     })
     
     if (editingMateriel.value) {
-      // Laravel exige _method=PUT pour gérer les fichiers en POST
       formData.append('_method', 'PUT') 
       await api.post(`/admin/materiels/${editingMateriel.value.id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -385,12 +371,10 @@ const adjustStock = async (materiel, delta) => {
     const response = await api.post(`/admin/materiels/${materiel.id}/stock`, {
       stock_disponible: newStock
     })
-    // Mise à jour locale avec la réponse du serveur (valeur authoritative)
     materiel.stock_disponible = response.data.data.stock_disponible
     loadStats()
   } catch (error) {
     console.error('Erreur stock:', error)
-    // Recharger pour synchroniser
     loadMateriels(pagination.value.current_page)
   }
 }
@@ -400,12 +384,21 @@ const goToPage = (page) => {
 }
 
 const getPhotoUrl = (materiel) => {
-  if (materiel.photos && materiel.photos.length > 0) return materiel.photos[0].url_photo
+  if (materiel.photos && materiel.photos.length > 0) {
+    return materiel.photos[0].url_photo
+  }
   return '/placeholder.jpg'
 }
 
+// ⚠️ NOUVEAU : Sécurité si l'image ne charge pas
+const handleImageError = (e) => {
+  e.target.src = '/placeholder.jpg';
+}
+
 const formatPrice = (price) => {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(price)
+  // ⚠️ CORRECTION ICI : On force la conversion en float pour éviter le NaN
+  const val = parseFloat(price) || 0;
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(val)
 }
 
 const getStockClass = (stock) => {
@@ -420,7 +413,6 @@ onMounted(() => {
   loadStats()
 })
 </script>
-
 <style scoped>
 .admin-dashboard {
   display: flex;

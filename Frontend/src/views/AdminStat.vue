@@ -1,5 +1,21 @@
 <template>
   <div class="admin-stat">
+    <!-- ⚠️ AJOUT : Barre de navigation Admin pour lier les pages -->
+    <div class="admin-nav-tabs">
+      <router-link to="/admin/produits" class="admin-tab">
+        📦 Produits & Stocks
+      </router-link>
+      <router-link to="/admin/commandes" class="admin-tab">
+        🛒 Commandes
+      </router-link>
+      <router-link to="/admin/statistiques" class="admin-tab active">
+        📊 Statistiques
+      </router-link>
+      <router-link to="/" class="admin-tab back-to-site">
+        🏠 Retour au site
+      </router-link>
+    </div>
+
     <div class="page-header">
       <div>
         <h1>Analyse et statistiques</h1>
@@ -268,6 +284,48 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* ⚠️ AJOUT : Styles pour la barre de navigation Admin */
+.admin-nav-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 0.5rem;
+  overflow-x: auto;
+}
+
+.admin-tab {
+  padding: 0.75rem 1.25rem;
+  text-decoration: none;
+  color: #6b7280;
+  font-weight: 500;
+  border-radius: 8px 8px 0 0;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.admin-tab:hover {
+  color: #1f2937;
+  background: #f3f4f6;
+}
+
+.admin-tab.active {
+  color: #3b82f6;
+  background: #eff6ff;
+  border-bottom: 2px solid #3b82f6;
+}
+
+.back-to-site {
+  margin-left: auto;
+  color: #9ca3af;
+}
+
+.back-to-site:hover {
+  color: #4b5563;
+}
+
+/* (Le reste de vos styles existants...) */
+
 .admin-stat {
   display: flex;
   flex-direction: column;
