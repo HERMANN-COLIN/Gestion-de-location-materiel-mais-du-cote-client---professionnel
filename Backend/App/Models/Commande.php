@@ -10,24 +10,23 @@ class Commande extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 
-        'numero_commande', 
-        'date_debut', 
-        'date_fin', 
+        'user_id',
+        'numero_commande',
+        'date_debut',
+        'date_fin',
         'date_commande',
-        'statut', 
-        'mode_livraison', 
-        'mode_retour', 
-        
-        // 🔥 ADRESSES - Les deux champs !
-        'adresse_livraison_id',      // ID de la relation
-        'adresse_livraison',         // ✅ AJOUTÉ - Texte figé
-        
-        'montant_total', 
+        'statut',
+        'mode_livraison',
+        'mode_retour',
+
+        // Adresses : ID de la relation + texte figé
+        'adresse_livraison_id',
+        'adresse_livraison',
+
+        'montant_total',
         'frais_livraison',
         'frais_retour',
-        'code_reduction_id',         // Si vous utilisez les codes promo
-        
+
         'notes',
         'jour_livraison',
         'distance_livraison',
@@ -67,41 +66,29 @@ class Commande extends Model
         return $this->belongsTo(Statut::class, 'statut');
     }
 
-    /**
-     * Relation avec le mode de livraison
-     */
     public function modeLivraison()
     {
         return $this->belongsTo(ModeLivraison::class, 'mode_livraison');
     }
 
-    /**
-     * Relation avec le mode de retour
-     */
     public function modeRetour()
     {
         return $this->belongsTo(ModeRetour::class, 'mode_retour');
     }
 
-    public function codeReduction()
-    {
-        return $this->belongsTo(CodeReduction::class, 'code_reduction_id');
-    }
-
     /**
-     * Relation many-to-many avec les matériels
-     * Utilise la table pivot 'commande_materiel' avec les nouvelles colonnes
+     * Relation many-to-many avec les matériels (table pivot 'commande_materiel')
      */
     public function materiels()
     {
         return $this->belongsToMany(Materiel::class, 'commande_materiel')
             ->withPivot([
-                'quantite', 
-                'prix_unitaire_ht', 
-                'taux_tva', 
+                'quantite',
+                'prix_unitaire_ht',
+                'taux_tva',
                 'prix_unitaire_ttc',
-                'sous_total_ht', 
-                'sous_total_ttc', 
+                'sous_total_ht',
+                'sous_total_ttc',
                 'montant_tva'
             ])
             ->withTimestamps();
@@ -110,33 +97,43 @@ class Commande extends Model
     // Accesseurs pour les totaux
     public function getTotalHtAttribute()
     {
-        return $this->materiels->sum(function($materiel) {
+        return $this->materiels->sum(function ($materiel) {
             return $materiel->pivot->sous_total_ht ?? 0;
         });
     }
 
     public function getTotalTvaAttribute()
     {
-        return $this->materiels->sum(function($materiel) {
+        return $this->materiels->sum(function ($materiel) {
             return $materiel->pivot->montant_tva ?? 0;
         });
     }
 
     public function getTotalTtcAttribute()
     {
-        return $this->materiels->sum(function($materiel) {
+        return $this->materiels->sum(function ($materiel) {
             return $materiel->pivot->sous_total_ttc ?? 0;
         });
     }
 
     /**
-     * Calculer le montant total de la commande (articles + frais - remise)
+     * Montant total de la commande (articles + frais)
      */
     public function calculerMontantFinal()
     {
-        $totalArticles = $this->total_ttc;
-        $totalFrais = $this->frais_livraison + ($this->frais_retour ?? 0);
-        
-        return $totalArticles + $totalFrais;
+        $totalFrais = ($this->frais_livraison ?? 0) + ($this->frais_retour ?? 0);
+
+        return $this->total_ttc + $totalFrais;
     }
+    protected $appends = ['statut_id'];
+
+public function getStatutIdAttribute()
+{
+    return $this->statut;
+}
+
+public function setStatutIdAttribute($value)
+{
+    $this->attributes['statut'] = $value;
+}
 }

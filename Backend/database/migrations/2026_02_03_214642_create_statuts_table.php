@@ -22,6 +22,7 @@ return new class extends Migration
             ['statut' => 'En attente', 'created_at' => now(), 'updated_at' => now()],
             ['statut' => 'Confirmé', 'created_at' => now(), 'updated_at' => now()],
             ['statut' => 'Livré', 'created_at' => now(), 'updated_at' => now()],
+            ['statut' => 'Annulé', 'created_at' => now(), 'updated_at' => now()],
 
         ]);
     }

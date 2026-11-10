@@ -9,7 +9,10 @@ const auth = useAuthStore()
 const mobileMenuOpen = ref(false)
 const panierCount = ref(0)
 
+
 const isAuthenticated = computed(() => auth.isAuthenticated)
+// Vérifie si l'utilisateur est un administrateur
+const isAdmin = computed(() => auth.isAdmin)
 
 // Charger le nombre d'articles dans le panier
 const loadPanierCount = async () => {
@@ -69,7 +72,7 @@ const toggleMobileMenu = () => {
           <span class="logo-icon">🏢</span>
           <span class="logo-text">TerraSana</span>
         </RouterLink>
-
+        
         <!-- Barre de recherche -->
         <div class="search-bar">
           <input 
@@ -103,13 +106,23 @@ const toggleMobileMenu = () => {
           </template>
 
           <template v-else>
+            <!-- Bouton Administrateur (uniquement visible pour l'admin) -->
+            <RouterLink v-if="isAdmin" to="/admin/produits" class="nav-link admin-link">
+              <span class="nav-icon">⚙️</span>
+              <span class="nav-text">Administration</span>
+            </RouterLink>
+
             <!-- Menu utilisateur -->
             <div class="user-menu">
               <RouterLink to="/dashboard" class="user-link">
                 <span class="user-icon">👤</span>
-                <span class="user-name">{{ auth.user?.name || 'Mon Compte' }}</span>
+                <span class="user-name">{{ auth.user?.name || auth.user?.email || 'Mon Compte' }}</span>
               </RouterLink>
               <div class="dropdown-menu">
+                <!-- Lien admin dans le menu déroulant -->
+                <RouterLink v-if="isAdmin" to="/admin/produits" class="dropdown-item admin-item">
+                  <span class="nav-icon">⚙️</span> Dashboard Admin
+                </RouterLink>
                 
                 <RouterLink to="/profil" class="dropdown-item">Mon profil</RouterLink>
                 <button class="dropdown-item logout" @click="auth.logout()">
@@ -135,6 +148,11 @@ const toggleMobileMenu = () => {
           Panier <span v-if="panierCount > 0">({{ panierCount }})</span>
         </RouterLink>
         
+        <!-- Lien admin dans le menu mobile -->
+        <RouterLink v-if="isAuthenticated && isAdmin" to="/admin/produits" class="mobile-link admin-mobile-link">
+          ⚙️ Administration
+        </RouterLink>
+
         <div class="mobile-auth" v-if="!isAuthenticated">
           <RouterLink to="/login" class="mobile-link">Connexion</RouterLink>
           <RouterLink to="/register" class="mobile-btn">Inscription</RouterLink>
@@ -353,6 +371,29 @@ const toggleMobileMenu = () => {
 .btn.danger {
   background: #ef4444;
   color: white;
+}
+
+/* Bouton Administrateur */
+.admin-link {
+  background: #fef2f2;
+  color: #dc2626 !important;
+  border: 1px solid #fee2e2;
+}
+
+.admin-link:hover {
+  background: #fee2e2;
+  color: #b91c1c !important;
+}
+
+.admin-item {
+  color: #dc2626 !important;
+  font-weight: 600;
+}
+
+.admin-mobile-link {
+  color: #dc2626;
+  font-weight: 600;
+  background: #fef2f2;
 }
 
 /* Menu utilisateur */

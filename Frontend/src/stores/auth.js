@@ -1,9 +1,25 @@
 import { defineStore } from 'pinia'
 import api from '@/services/axios'
 
+// 🔧 Fonction utilitaire pour lire le localStorage en toute sécurité
+const getStoredUser = () => {
+  try {
+    const storedUser = localStorage.getItem('user')
+    // Si c'est null, undefined, ou "undefined", on retourne null
+    if (!storedUser || storedUser === 'undefined' || storedUser === 'null') {
+      return null
+    }
+    return JSON.parse(storedUser)
+  } catch (error) {
+    console.error('Erreur parsing user depuis localStorage:', error)
+    return null
+  }
+}
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    user: null,
+    // Utilisation de la fonction sécurisée
+    user: getStoredUser(),
     token: localStorage.getItem('token') || null,
     loading: false,
     error: null
@@ -11,6 +27,7 @@ export const useAuthStore = defineStore('auth', {
 
   getters: {
     isAuthenticated: (state) => !!state.token,
+    isAdmin: (state) => state.user?.type_id === 3 || state.user?.type?.id === 3,
     getUser: (state) => state.user,
     getLoading: (state) => state.loading,
     getError: (state) => state.error
@@ -30,8 +47,13 @@ export const useAuthStore = defineStore('auth', {
 
         if (response.data.token) {
           this.token = response.data.token
-          this.user = response.data.user
+          this.user = response.data.data
+          
           localStorage.setItem('token', this.token)
+          // On ne sauvegarde que si user est bien défini
+          if (this.user) {
+            localStorage.setItem('user', JSON.stringify(this.user))
+          }
         }
 
         return { success: true, data: response.data }
@@ -42,16 +64,14 @@ export const useAuthStore = defineStore('auth', {
           error.response?.data?.message ||
           'Erreur lors de l’inscription'
 
-       if (error.response?.status === 422) {
-  console.log('🧨 Erreurs de validation Laravel:', error.response.data.errors)
-
-  return {
-    success: false,
-    error: this.error,
-    validationErrors: error.response.data.errors
-  }
-}
-
+        if (error.response?.status === 422) {
+          console.log('🧨 Erreurs de validation Laravel:', error.response.data.errors)
+          return {
+            success: false,
+            error: this.error,
+            validationErrors: error.response.data.errors
+          }
+        }
 
         return { success: false, error: this.error }
       } finally {
@@ -64,25 +84,32 @@ export const useAuthStore = defineStore('auth', {
         this.loading = true
         this.error = null
 
-        console.log('📤 Sending login data:', credentials)
-
         const response = await api.post('/login', credentials)
-
-        console.log('✅ Login response:', response.data)
 
         if (response.data.token) {
           this.token = response.data.token
-          this.user = response.data.user
+          this.user = response.data.data
+          
           localStorage.setItem('token', this.token)
+          // On ne sauvegarde que si user est bien défini
+          if (this.user) {
+            localStorage.setItem('user', JSON.stringify(this.user))
+          }
         }
 
         return { success: true, data: response.data }
       } catch (error) {
         console.error('❌ Login error:', error)
 
-        this.error =
-          error.response?.data?.message ||
-          'Identifiants incorrects'
+        this.error = error.response?.data?.message || 'Identifiants incorrects'
+
+        if (error.response?.status === 422) {
+          return {
+            success: false,
+            error: this.error,
+            validationErrors: error.response.data.errors
+          }
+        }
 
         return { success: false, error: this.error }
       } finally {
@@ -99,6 +126,7 @@ export const useAuthStore = defineStore('auth', {
         this.token = null
         this.user = null
         localStorage.removeItem('token')
+        localStorage.removeItem('user')
       }
     },
 
@@ -107,13 +135,18 @@ export const useAuthStore = defineStore('auth', {
         if (!this.token) return
 
         const response = await api.get('/user')
-        this.user = response.data
+        this.user = response.data.data
+        
+        if (this.user) {
+          localStorage.setItem('user', JSON.stringify(this.user))
+        }
       } catch (error) {
         console.error('Fetch user error:', error)
 
         this.token = null
         this.user = null
         localStorage.removeItem('token')
+        localStorage.removeItem('user')
       }
     },
 

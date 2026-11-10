@@ -6,7 +6,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
-  withCredentials: true  // ← IMPORTANT pour CORS
+  withCredentials: false // ← Désactivé car on utilise Bearer Token
 })
 
 // Intercepteur pour ajouter le token

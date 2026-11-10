@@ -539,7 +539,6 @@ const form = reactive({
   frais_retour: 0,
   jour_livraison: null,
   distance: 0, // Distance unique pour livraison et retour
-  code_reduction: null,
   notes: '',
   adresse_livraison_index: null
 })
@@ -867,9 +866,6 @@ const submitOrder = async () => {
       }
     }
     
-    if (form.code_reduction) {
-      commandeData.code_reduction = form.code_reduction
-    }
     
     if (form.notes) {
       commandeData.notes = form.notes
@@ -888,16 +884,18 @@ const submitOrder = async () => {
       orderSuccess.value = true
     }
   } catch (error) {
-    console.error('❌ Erreur commande:', error)
-    
-    if (error.response?.data?.message) {
-      alert(`Erreur: ${error.response.data.message}`)
-    } else if (error.response?.data?.error) {
-      alert(`Erreur technique: ${error.response.data.error}`)
-    } else {
-      alert('Erreur inconnue lors de la création de la commande')
-    }
-  } finally {
+  console.error('❌ Erreur commande:', error)
+  
+  if (error.response?.data?.errors) {
+    // Afficher les erreurs de validation détaillées
+    const erreurs = Object.values(error.response.data.errors).flat().join('\n')
+    alert(`Erreurs de validation :\n${erreurs}`)
+  } else if (error.response?.data?.message) {
+    alert(`Erreur: ${error.response.data.message}`)
+  } else {
+    alert('Erreur inconnue lors de la création de la commande')
+  } 
+} finally {
     submitting.value = false
   }
 }
